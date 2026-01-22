@@ -26,22 +26,41 @@ class PDFToSpeechLoader(BaseLoader):
                 """CREATE INDEX IF NOT EXISTS idx_speakers_name ON speakers(name);""",
                 """
                 CREATE TABLE IF NOT EXISTS speeches (
+                    id SERIAL PRIMARY KEY,
                     pdf_url_id TEXT NOT NULL,
                     speaker_id UUID NOT NULL REFERENCES speakers(id) ON DELETE CASCADE,
                     speech_number INT NOT NULL,
                     date DATE NOT NULL,
+                    title TEXT,
                     class_name TEXT NOT NULL,
                     confer_number INT NOT NULL,
                     dae_number INT NOT NULL,
                     speech TEXT NOT NULL,
+                    summary TEXT,
+                    vectorized BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     CONSTRAINT unique_speech UNIQUE (pdf_url_id, speech_number)
                 );
                 """,
                 """CREATE INDEX IF NOT EXISTS idx_speeches_pdf_url_id ON speeches(pdf_url_id);""",
+                """CREATE INDEX IF NOT EXISTS idx_speeches_vectorized ON speeches(vectorized);""",
             ]
             for query in queries:
                 self._execute_query(query)
+
+            # 기존 테이블에 새 컬럼 추가 (마이그레이션)
+            migration_queries = [
+                "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS id SERIAL;",
+                "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS title TEXT;",
+                "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS summary TEXT;",
+                "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS vectorized BOOLEAN DEFAULT FALSE;",
+            ]
+            for query in migration_queries:
+                try:
+                    self._execute_query(query)
+                except Exception:
+                    pass  # 컬럼이 이미 존재하면 무시
+
             logger.info("✅ 데이터베이스 테이블 생성 완료")
         except Exception as e:
             logger.error(f"❌ 데이터베이스 테이블 생성 실패: {e}")
@@ -71,12 +90,15 @@ class PDFToSpeechLoader(BaseLoader):
                 speech_number,
                 speaker_id,
                 date,
+                title,
                 class_name,
                 confer_number,
                 dae_number,
                 speech,
+                summary,
                 created_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (pdf_url_id, speech_number) DO NOTHING
         """
         for idx, speech in enumerate(speech_data):
             speaker_id = speaker_map.get(speech["speaker"])
@@ -90,10 +112,12 @@ class PDFToSpeechLoader(BaseLoader):
                     idx + 1,
                     speaker_id,
                     speech["date"],
+                    speech.get("title"),
                     speech["class_name"],
                     speech["confer_number"],
                     speech["dae_number"],
                     speech["text"],
+                    speech.get("summary"),
                     speech["timestamp"],
                 ),
             )
