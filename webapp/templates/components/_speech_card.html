@@ -1,0 +1,29 @@
+{# Usage: {% include "components/_speech_card.html" %} #}
+{# Required context: speech (dict with speaker, text, summary, date, etc.) #}
+
+<div class="bg-white rounded-lg shadow p-4 mb-4">
+    <div class="flex items-center gap-3 mb-3">
+        <span class="font-medium text-gray-800">{{ speech.speaker }}</span>
+        {% if speech.date %}
+        <span class="text-sm text-gray-500">{{ speech.date }}</span>
+        {% endif %}
+    </div>
+
+    {% if speech.summary %}
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mb-3">
+        <p class="text-sm text-blue-800">{{ speech.summary }}</p>
+    </div>
+    {% endif %}
+
+    <div class="text-gray-700 leading-relaxed">
+        {% if speech.text|length > 500 %}
+        <p>{{ speech.text[:500] }}...</p>
+        <details class="mt-2">
+            <summary class="text-blue-600 cursor-pointer text-sm">전체 보기</summary>
+            <p class="mt-2">{{ speech.text }}</p>
+        </details>
+        {% else %}
+        <p>{{ speech.text }}</p>
+        {% endif %}
+    </div>
+</div>

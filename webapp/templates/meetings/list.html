@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}회의 목록 - 국회 회의록 분석{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">회의 목록</h1>
+        <p class="text-gray-600 mt-1">국회 회의록을 검색하고 상세 내용을 확인합니다.</p>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="bg-white rounded-lg shadow p-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">위원회</label>
+                <select name="committee" class="w-full border rounded-md px-3 py-2 bg-white">
+                    <option value="">전체</option>
+                    {% for name in filters.class_names %}
+                    <option value="{{ name }}" {% if current_filters.committee == name %}selected{% endif %}>
+                        {{ name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">대수</label>
+                <select name="session" class="w-full border rounded-md px-3 py-2 bg-white">
+                    <option value="">전체</option>
+                    {% for num in filters.dae_numbers %}
+                    <option value="{{ num }}" {% if current_filters.session == num %}selected{% endif %}>
+                        제{{ num }}대
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">제목 검색</label>
+                <input type="text" name="q" value="{{ current_filters.q or '' }}"
+                       placeholder="검색어 입력..."
+                       class="w-full border rounded-md px-3 py-2">
+            </div>
+
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                    검색
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Results Count -->
+    <p class="text-gray-600">{{ meetings|length }}개 회의</p>
+
+    <!-- Meetings List -->
+    <div class="bg-white rounded-lg shadow divide-y">
+        {% for meeting in meetings %}
+        <div class="p-4 hover:bg-gray-50 transition-colors">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-sm text-gray-500">{{ meeting.date }}</span>
+                        <span class="text-sm bg-gray-100 px-2 py-0.5 rounded">{{ meeting.class_name }}</span>
+                        <span class="text-sm text-gray-400">제{{ meeting.dae_number }}대 {{ meeting.confer_number }}회</span>
+                    </div>
+                    <h3 class="font-medium text-gray-800">{{ meeting.title }}</h3>
+                    <div class="text-sm text-gray-500 mt-1">
+                        발언자 {{ meeting.speaker_count }}명 · 발언 {{ meeting.speech_count }}건
+                    </div>
+                </div>
+                <a href="/meetings/{{ meeting.pdf_url_id }}"
+                   class="ml-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm">
+                    상세 보기
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="p-8 text-center text-gray-500">
+            검색 결과가 없습니다.
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if meetings|length >= 30 %}
+    <div class="flex justify-center gap-2">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}{% if current_filters.committee %}&committee={{ current_filters.committee }}{% endif %}{% if current_filters.session %}&session={{ current_filters.session }}{% endif %}{% if current_filters.q %}&q={{ current_filters.q }}{% endif %}"
+           class="px-4 py-2 border rounded-md hover:bg-gray-50">
+            이전
+        </a>
+        {% endif %}
+        <span class="px-4 py-2 bg-blue-600 text-white rounded-md">{{ page }}</span>
+        <a href="?page={{ page + 1 }}{% if current_filters.committee %}&committee={{ current_filters.committee }}{% endif %}{% if current_filters.session %}&session={{ current_filters.session }}{% endif %}{% if current_filters.q %}&q={{ current_filters.q }}{% endif %}"
+           class="px-4 py-2 border rounded-md hover:bg-gray-50">
+            다음
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

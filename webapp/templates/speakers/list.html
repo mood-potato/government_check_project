@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}의원 검색 - 국회 회의록 분석{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">의원 검색</h1>
+        <p class="text-gray-600 mt-1">의원별 발언 기록을 검색합니다.</p>
+    </div>
+
+    <!-- Search -->
+    <form method="get" class="flex gap-4">
+        <input type="text" name="q" value="{{ search_query or '' }}"
+               placeholder="의원 이름 검색..."
+               class="flex-1 border rounded-md px-4 py-2">
+        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors">
+            검색
+        </button>
+    </form>
+
+    <!-- Top Speakers Chart -->
+    {% if top_speakers and not search_query %}
+    <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="font-semibold text-gray-800 mb-4">발언 수 TOP 20</h3>
+        <div id="top-speakers-chart" class="h-96"></div>
+    </div>
+    {% endif %}
+
+    <!-- Results Count -->
+    <p class="text-gray-600">{{ speakers|length }}명의 의원</p>
+
+    <!-- Speakers Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for speaker in speakers %}
+        <div class="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="font-medium text-gray-800 text-lg">{{ speaker.name }}</h3>
+                    <p class="text-sm text-gray-500 mt-1">
+                        {% if speaker.first_speech and speaker.last_speech %}
+                        {{ speaker.first_speech }} ~ {{ speaker.last_speech }}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            <div class="flex gap-4 mt-4">
+                <div>
+                    <p class="text-2xl font-bold text-blue-600">{{ speaker.speech_count }}</p>
+                    <p class="text-xs text-gray-500">발언 수</p>
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-600">{{ speaker.meeting_count }}</p>
+                    <p class="text-xs text-gray-500">참여 회의</p>
+                </div>
+            </div>
+            <a href="/speakers/{{ speaker.id }}"
+               class="block mt-4 text-center bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors">
+                발언 보기
+            </a>
+        </div>
+        {% else %}
+        <div class="col-span-full bg-gray-50 rounded-lg p-8 text-center text-gray-500">
+            검색 결과가 없습니다.
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if speakers|length >= 50 %}
+    <div class="flex justify-center gap-2">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}{% if search_query %}&q={{ search_query }}{% endif %}"
+           class="px-4 py-2 border rounded-md hover:bg-gray-50">
+            이전
+        </a>
+        {% endif %}
+        <span class="px-4 py-2 bg-blue-600 text-white rounded-md">{{ page }}</span>
+        <a href="?page={{ page + 1 }}{% if search_query %}&q={{ search_query }}{% endif %}"
+           class="px-4 py-2 border rounded-md hover:bg-gray-50">
+            다음
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if top_speakers and not search_query %}
+<script>
+    const topSpeakers = {{ top_speakers | tojson }};
+    const labels = topSpeakers.map(d => d.name);
+    const values = topSpeakers.map(d => d.speech_count);
+
+    ChartUtils.horizontalBar('top-speakers-chart', labels.reverse(), values.reverse(), '');
+</script>
+{% endif %}
+{% endblock %}
