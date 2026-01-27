@@ -40,6 +40,44 @@ def sample_pdf_text():
 
 
 @pytest.fixture
+def sample_pdf_text_with_noise():
+    """노이즈가 포함된 샘플 PDF 텍스트"""
+    return """제431회-제1차(2026년1월15일) 1
+◯의장 우원식
+(14시41분 개의)
+성원이 되었으므로 회의를 시작하겠습니다.
+(일동 기립)
+의원 선서를 하겠습니다.
+o 의원(이소희) 선서 및 인사
+◯이소희 의원
+존경하는 국민 여러분, 감사합니다.
+◯의사국장 임근원
+(전자투표)
+의안 상정 보고를 드리겠습니다.
+(대안은 부록으로 보존함)
+◯출석 의원
+이 이후는 부록입니다.
+"""
+
+
+@pytest.fixture
+def sample_pdf_text_with_false_positives():
+    """비발언 항목이 포함된 샘플 PDF 텍스트"""
+    return """
+◯의장 우원식
+회의를 시작하겠습니다.
+◯군인사법 일부개정법률안
+(대안은 부록으로 보존함)
+◯농어촌특별세법 일부개정법률안
+(대안은 부록으로 보존함)
+◯의안 심사
+보고서를 제출합니다.
+◯위원 김철수
+찬성합니다.
+"""
+
+
+@pytest.fixture
 def sample_pdf_api_response():
     """PDF URL API 응답 샘플"""
     return [
@@ -63,7 +101,8 @@ def sample_speech_data():
     return [
         {
             "pdf_url_id": "test-uuid-001",
-            "speaker": "의장 홍길동",
+            "speaker": "홍길동",
+            "speaker_title": "의장",
             "text": "오늘 회의를 시작하겠습니다.",
             "date": "2024-01-15",
             "speech_number": 1,
@@ -77,7 +116,8 @@ def sample_speech_data():
         },
         {
             "pdf_url_id": "test-uuid-001",
-            "speaker": "위원 김철수",
+            "speaker": "김철수",
+            "speaker_title": "위원",
             "text": "저는 이 안건에 찬성합니다.",
             "date": "2024-01-15",
             "speech_number": 2,

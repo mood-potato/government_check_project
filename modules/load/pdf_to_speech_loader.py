@@ -19,6 +19,7 @@ class PDFToSpeechLoader(BaseLoader):
                 CREATE TABLE IF NOT EXISTS speakers (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     name TEXT NOT NULL UNIQUE,
+                    title TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     CONSTRAINT unique_speaker UNIQUE (name)
                 );
@@ -54,6 +55,7 @@ class PDFToSpeechLoader(BaseLoader):
                 "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS title TEXT;",
                 "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS summary TEXT;",
                 "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS vectorized BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS title TEXT;",
             ]
             for query in migration_queries:
                 try:
@@ -71,16 +73,16 @@ class PDFToSpeechLoader(BaseLoader):
         self._create_tables()
 
     def _save_all_data(self, speech_data: List[Dict]) -> None:
-        speaker_names = {s["speaker"] for s in speech_data}
+        speakers = {s["speaker"]: s.get("speaker_title") for s in speech_data}
         speaker_map = {}
         speaker_query = """
-            INSERT INTO speakers (name) 
-            VALUES (%s)
-            ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+            INSERT INTO speakers (name, title)
+            VALUES (%s, %s)
+            ON CONFLICT (name) DO UPDATE SET title = COALESCE(EXCLUDED.title, speakers.title)
             RETURNING id
         """
-        for name in speaker_names:
-            result = self._execute_query(speaker_query, (name,))
+        for name, title in speakers.items():
+            result = self._execute_query(speaker_query, (name, title))
             if result:
                 speaker_map[name] = result[0][0]
 

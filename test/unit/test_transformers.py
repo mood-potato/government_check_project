@@ -19,9 +19,12 @@ class TestPDFToSpeechTransformer:
         )
 
         assert len(result) == 3
-        assert result[0]["speaker"] == "의장 홍길동"
-        assert result[1]["speaker"] == "위원 김철수"
-        assert result[2]["speaker"] == "위원 박영희"
+        assert result[0]["speaker"] == "홍길동"
+        assert result[0]["speaker_title"] == "의장"
+        assert result[1]["speaker"] == "김철수"
+        assert result[1]["speaker_title"] == "위원"
+        assert result[2]["speaker"] == "박영희"
+        assert result[2]["speaker_title"] == "위원"
 
     def test_transform_preserves_speech_content(self, sample_pdf_text):
         transformer = PDFToSpeechTransformer()
@@ -115,6 +118,161 @@ class TestPDFToSpeechTransformer:
         assert speech["file_path"] == "http://example.com/pdf"
         assert speech["summary"] is None
         assert "timestamp" in speech
+
+
+class TestPDFToSpeechPreprocessing:
+    def test_preprocess_removes_page_headers(self):
+        transformer = PDFToSpeechTransformer()
+        text = "제431회-제1차(2026년1월15일) 3\n◯의장 홍길동\n회의를 시작합니다."
+        result = transformer._preprocess_text(text)
+        assert "제431회-제1차" not in result
+        assert "◯의장 홍길동" in result
+
+    def test_preprocess_removes_appendix(self):
+        transformer = PDFToSpeechTransformer()
+        text = "◯의장 홍길동\n회의 발언\n◯출석 의원\n부록 내용"
+        result = transformer._preprocess_text(text)
+        assert "부록 내용" not in result
+        assert "회의 발언" in result
+
+    def test_clean_speech_removes_timestamps(self):
+        transformer = PDFToSpeechTransformer()
+        text = "(14시41분 개의)\n성원이 되었으므로 회의를 시작하겠습니다."
+        result = transformer._clean_speech_text(text)
+        assert "14시41분" not in result
+        assert "회의를 시작하겠습니다" in result
+
+    def test_clean_speech_removes_stage_directions(self):
+        transformer = PDFToSpeechTransformer()
+        text = "의원 선서를 하겠습니다.\n(일동 기립)\n(전자투표)"
+        result = transformer._clean_speech_text(text)
+        assert "일동 기립" not in result
+        assert "전자투표" not in result
+        assert "의원 선서를 하겠습니다" in result
+
+    def test_clean_speech_removes_agenda_markers(self):
+        transformer = PDFToSpeechTransformer()
+        text = "발언 내용입니다.\no 의원(이소희) 선서 및 인사\n다음 발언입니다."
+        result = transformer._clean_speech_text(text)
+        assert "o 의원(이소희)" not in result
+        assert "발언 내용입니다" in result
+
+    def test_clean_speech_removes_procedural_memo(self):
+        transformer = PDFToSpeechTransformer()
+        text = "의안을 상정합니다.\n(대안은 부록으로 보존함)"
+        result = transformer._clean_speech_text(text)
+        assert "부록으로 보존함" not in result
+        assert "의안을 상정합니다" in result
+
+
+class TestNonSpeechFiltering:
+    def test_regex_ignores_non_speech_markers(self, sample_pdf_text_with_false_positives):
+        transformer = PDFToSpeechTransformer()
+        result = transformer.transform(
+            pdf_url_id="test",
+            text=sample_pdf_text_with_false_positives,
+            title="테스트",
+            date="2024-01-15",
+            confer_number="1",
+            dae_number="22",
+            class_name="본회의",
+            file_path="http://test.pdf",
+        )
+
+        speakers = [s["speaker"] for s in result]
+        assert "우원식" in speakers
+        assert "김철수" in speakers
+        assert len(result) == 2  # 의안명, 의안 심사 제외
+
+    def test_filters_law_amendment_names(self):
+        transformer = PDFToSpeechTransformer()
+        assert transformer._is_non_speech("군인사법 일부개정법률안") is True
+        assert transformer._is_non_speech("농어촌특별세법 일부개정법률안") is True
+
+    def test_filters_appendix_metadata(self):
+        transformer = PDFToSpeechTransformer()
+        assert transformer._is_non_speech("출석 의원") is True
+        assert transformer._is_non_speech("의안 심사") is True
+        assert transformer._is_non_speech("보고서 제출") is True
+
+    def test_does_not_filter_real_speakers(self):
+        transformer = PDFToSpeechTransformer()
+        assert transformer._is_non_speech("의장 우원식") is False
+        assert transformer._is_non_speech("이소희 의원") is False
+        assert transformer._is_non_speech("위원 김철수") is False
+
+
+class TestSpeakerParsing:
+    def test_parse_speaker_title_name(self):
+        transformer = PDFToSpeechTransformer()
+        title, name = transformer._parse_speaker("의장 우원식")
+        assert title == "의장"
+        assert name == "우원식"
+
+    def test_parse_speaker_name_title(self):
+        transformer = PDFToSpeechTransformer()
+        title, name = transformer._parse_speaker("이소희 의원")
+        assert title == "의원"
+        assert name == "이소희"
+
+    def test_parse_speaker_committee_chair(self):
+        transformer = PDFToSpeechTransformer()
+        title, name = transformer._parse_speaker("법사위원장 정청래")
+        assert title == "법사위원장"
+        assert name == "정청래"
+
+    def test_parse_speaker_no_title(self):
+        transformer = PDFToSpeechTransformer()
+        title, name = transformer._parse_speaker("홍길동")
+        assert title is None
+        assert name == "홍길동"
+
+    def test_parse_speaker_bureau_chief(self):
+        transformer = PDFToSpeechTransformer()
+        title, name = transformer._parse_speaker("의사국장 임근원")
+        assert title == "의사국장"
+        assert name == "임근원"
+
+
+class TestFullTransformWithNoise:
+    def test_transform_with_noise_removes_appendix(self, sample_pdf_text_with_noise):
+        transformer = PDFToSpeechTransformer()
+        result = transformer.transform(
+            pdf_url_id="test",
+            text=sample_pdf_text_with_noise,
+            title="테스트",
+            date="2026-01-15",
+            confer_number="1",
+            dae_number="22",
+            class_name="본회의",
+            file_path="http://test.pdf",
+        )
+
+        speakers = [s["speaker"] for s in result]
+        # 부록 이후 내용은 제거됨
+        assert "출석 의원" not in [s.get("speaker_raw") for s in result]
+        # 실제 발언자만 남음
+        assert "우원식" in speakers
+        assert "이소희" in speakers
+        assert "임근원" in speakers
+
+    def test_transform_with_noise_cleans_text(self, sample_pdf_text_with_noise):
+        transformer = PDFToSpeechTransformer()
+        result = transformer.transform(
+            pdf_url_id="test",
+            text=sample_pdf_text_with_noise,
+            title="테스트",
+            date="2026-01-15",
+            confer_number="1",
+            dae_number="22",
+            class_name="본회의",
+            file_path="http://test.pdf",
+        )
+
+        first_speech_text = result[0]["text"]
+        assert "14시41분" not in first_speech_text
+        assert "일동 기립" not in first_speech_text
+        assert "제431회-제1차" not in first_speech_text
 
 
 class TestCongressScheduleTransformer:
