@@ -20,3 +20,10 @@ ps:
 
 build:
 	docker-compose -p $(PROJECT_NAME) build
+
+deploy:
+	docker-compose -p $(PROJECT_NAME) build webapp
+	docker-compose -p $(PROJECT_NAME) up -d
+
+webapp-logs:
+	docker-compose -p $(PROJECT_NAME) logs -f webapp
