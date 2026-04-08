@@ -239,6 +239,25 @@ class TestNonSpeechFiltering:
         full_context = "전기통신금융사기 피해 방지 및 피해금 환급에 관한 특별법 일부개정법률안"
         assert transformer._is_non_speech(full_context) is True
 
+    def test_transform_excludes_entries_with_no_title_and_law_name_pattern(self):
+        """법률 이름이 speaker로 파싱된 경우 transform 결과에서 제외"""
+        transformer = PDFToSpeechTransformer()
+        text = (
+            "◯의장 우원식\n회의를 시작합니다.\n"
+            "◯노후계획도시 정비\n및 지원에 관한 특별법 일부개정법률안(대안)\n"
+            "◯이소희 의원\n찬성합니다.\n"
+        )
+        result = transformer.transform(
+            pdf_url_id="test", text=text, title="테스트",
+            date="2026-01-15", confer_number="1", dae_number="22",
+            class_name="본회의", file_path="test.pdf",
+        )
+        speakers = [s["speaker"] for s in result]
+        assert "정비" not in speakers
+        assert "우원식" in speakers
+        assert "이소희" in speakers
+        assert len(result) == 2
+
 
 class TestSpeakerParsing:
     def test_parse_speaker_title_name(self):
