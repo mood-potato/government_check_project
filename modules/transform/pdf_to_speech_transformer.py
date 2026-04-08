@@ -61,13 +61,14 @@ class PDFToSpeechTransformer(BaseTransformer):
         # 페이지 헤더 제거: "제431회-제1차(2026년1월15일) 3"
         text = re.sub(r"제\d+회-제\d+차\([^)]*\)\s*\d+", "", text)
 
-        # 부록 섹션 감지 및 잘라내기
+        # 부록 섹션 감지 및 잘라내기 — 텍스트에서 가장 먼저 나타나는 마커 기준
+        earliest_pos = len(text)
         for marker in APPENDIX_MARKERS:
-            idx = text.find(marker)
-            if idx != -1:
-                # 부록 마커 이전까지만 유지
-                text = text[:idx]
-                break
+            pos = text.find(marker)
+            if pos != -1 and pos < earliest_pos:
+                earliest_pos = pos
+        if earliest_pos < len(text):
+            text = text[:earliest_pos]
 
         return text
 
@@ -90,12 +91,12 @@ class PDFToSpeechTransformer(BaseTransformer):
         return text.strip()
 
     def _is_non_speech(self, speaker_raw: str) -> bool:
-        """비발언 항목인지 검사"""
+        """비발언 항목인지 검사. speaker_raw는 2단어 fragment 또는 full_context 모두 가능."""
         for keyword in NON_SPEECH_KEYWORDS:
             if keyword in speaker_raw:
                 return True
-        # 법률안/의안명 패턴: "~법 일부개정법률안", "~법률안"
-        if re.search(r"법률?안", speaker_raw):
+        # 법률안/의안명 패턴: "~법 일부개정법률안", "~법률안", "~법률 일부개정법률안"
+        if re.search(r"법률?안|법률 일부개정|기본법 일부개정", speaker_raw):
             return True
         return False
 
@@ -159,8 +160,9 @@ class PDFToSpeechTransformer(BaseTransformer):
             speaker_raw = match.group(1).strip()
             speech = match.group(2).strip()
 
-            # 비발언 항목 필터링
-            if self._is_non_speech(speaker_raw):
+            # full_context = speaker_raw + speech 앞 80자 → 법률안 전체 이름이 보임
+            full_context = speaker_raw + " " + speech[:80]
+            if self._is_non_speech(full_context):
                 continue
 
             # 발언 텍스트 정제
