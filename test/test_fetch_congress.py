@@ -1,4 +1,4 @@
-from modules.constants.url_constants import (
+from modules.utils.url_constants import (
     MAIN_CONGRESS_SCHEDULE_URL,
     MAIN_CONGRESS_SPEECH_PDF_URL,
 )

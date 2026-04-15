@@ -1,7 +1,7 @@
 # modules/extract/pdf_url_extractor.py
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from modules.constants.config import OPEN_GOVERMENT_API_KEY
+from modules.utils.config import OPEN_GOVERMENT_API_KEY
 from modules.base.base_extractor import BaseExtractor
 from modules.utils.request_utils import request_paginated_data
 

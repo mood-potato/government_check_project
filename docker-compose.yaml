@@ -16,16 +16,19 @@ services:
       timeout: 5s
       retries: 5
 
-  qdrant:
-    image: qdrant/qdrant:v1.7.3
-    container_name: qdrant
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
-      - "6333:6333"  # REST API
-      - "6334:6334"  # gRPC
+      - "9200:9200"
     volumes:
-      - qdrant_data:/qdrant/storage
+      - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6333/readyz"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,11 +42,11 @@ services:
       - .env
     environment:
       POSTGRES_HOST: postgres
-      QDRANT_HOST: qdrant
+      ELASTICSEARCH_HOST: elasticsearch
     depends_on:
       postgres:
         condition: service_healthy
-      qdrant:
+      elasticsearch:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/stats')"]
@@ -66,6 +69,6 @@ services:
 
 volumes:
   postgres_data:
-  qdrant_data:
+  elasticsearch_data:
   caddy_data:
   caddy_config:

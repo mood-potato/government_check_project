@@ -45,7 +45,7 @@ class PDFToSpeechTransformer(BaseTransformer):
 
         if enable_summary:
             try:
-                from modules.llm.summarizer import SpeechSummarizer
+                from modules.utils.summarizer import SpeechSummarizer
                 self.summarizer = SpeechSummarizer()
                 if self.summarizer.is_available():
                     logger.info("요약 기능이 활성화되었습니다.")

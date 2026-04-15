@@ -6,7 +6,7 @@ from datetime import date
 class TestDatabase:
     @patch("webapp.services.database.get_postgres_connection")
     def test_get_connection_creates_new_connection(self, mock_get_conn):
-        from webapp.services.database import Database
+        from api.services.database import Database
 
         mock_conn = MagicMock()
         mock_conn.closed = False
@@ -20,7 +20,7 @@ class TestDatabase:
 
     @patch("webapp.services.database.get_postgres_connection")
     def test_fetch_all_returns_list_of_dicts(self, mock_get_conn):
-        from webapp.services.database import Database
+        from api.services.database import Database
 
         mock_cursor = MagicMock()
         mock_cursor.description = [("id",), ("name",)]
@@ -38,7 +38,7 @@ class TestDatabase:
 
     @patch("webapp.services.database.get_postgres_connection")
     def test_fetch_one_returns_dict_or_none(self, mock_get_conn):
-        from webapp.services.database import Database
+        from api.services.database import Database
 
         mock_cursor = MagicMock()
         mock_cursor.description = [("id",), ("name",)]
@@ -58,7 +58,7 @@ class TestDatabase:
 class TestMeetingService:
     @patch("webapp.services.meeting_service.Database")
     def test_get_stats_returns_four_metrics(self, mock_db):
-        from webapp.services.meeting_service import MeetingService
+        from api.services.meeting_service import MeetingService
 
         mock_date = MagicMock()
         mock_date.strftime.return_value = "2024-01-15"
@@ -81,7 +81,7 @@ class TestMeetingService:
 
     @patch("webapp.services.meeting_service.Database")
     def test_get_all_with_filters(self, mock_db):
-        from webapp.services.meeting_service import MeetingService
+        from api.services.meeting_service import MeetingService
 
         mock_db.fetch_all.return_value = [
             {"pdf_url_id": "1", "title": "Test Meeting", "speaker_count": 5}
@@ -96,7 +96,7 @@ class TestMeetingService:
 class TestSpeakerService:
     @patch("webapp.services.speaker_service.Database")
     def test_get_all_with_search(self, mock_db):
-        from webapp.services.speaker_service import SpeakerService
+        from api.services.speaker_service import SpeakerService
 
         mock_db.fetch_all.return_value = [
             {"id": "1", "name": "홍길동", "speech_count": 100}
@@ -109,7 +109,7 @@ class TestSpeakerService:
 
     @patch("webapp.services.speaker_service.Database")
     def test_get_stats_returns_aggregates(self, mock_db):
-        from webapp.services.speaker_service import SpeakerService
+        from api.services.speaker_service import SpeakerService
 
         mock_db.fetch_one.return_value = {
             "total_speeches": 100,

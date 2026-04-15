@@ -1,7 +1,7 @@
 # modules/extract/congress_schedule_extractor.py
 from modules.base.base_extractor import BaseExtractor
 from modules.utils.request_utils import request_paginated_data
-from modules.constants.config import OPEN_GOVERMENT_API_KEY
+from modules.utils.config import OPEN_GOVERMENT_API_KEY
 
 class CongressScheduleExtractor(BaseExtractor):
     """

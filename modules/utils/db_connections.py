@@ -2,7 +2,7 @@ import os
 
 import psycopg2
 from dotenv import load_dotenv
-from qdrant_client import QdrantClient
+from elasticsearch import Elasticsearch
 
 
 def get_postgres_connection():
@@ -17,11 +17,11 @@ def get_postgres_connection():
     )
 
 
-def get_qdrant_client() -> QdrantClient:
-    """Qdrant 클라이언트 반환"""
+def get_elasticsearch_client() -> Elasticsearch:
+    """Elasticsearch 클라이언트 반환"""
     load_dotenv()
 
-    host = os.getenv("QDRANT_HOST", "localhost")
-    port = int(os.getenv("QDRANT_PORT", 6333))
+    host = os.getenv("ELASTICSEARCH_HOST", "localhost")
+    port = int(os.getenv("ELASTICSEARCH_PORT", 9200))
 
-    return QdrantClient(host=host, port=port)
+    return Elasticsearch(hosts=[{"host": host, "port": port, "scheme": "http"}])

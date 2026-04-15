@@ -17,7 +17,7 @@ def client():
         conn.cursor.return_value = mock_cursor
         mock_conn.return_value = conn
 
-        from webapp.main import app
+        from api.main import app
 
         yield TestClient(app)
 

@@ -140,25 +140,9 @@ QDRANT_PORT=6333
 - `test/` - pytest tests (unit/, integration/)
 - `archive/` - Legacy/experimental code
 
+## gstack
 
-## 하네스: 개발 프로세스
+For all web browsing, use the `/browse` skill from gstack. Never use `mcp__claude-in-chrome__*` tools directly.
 
-**목표:** 서비스 기획 → 피쳐 기획 → 설계 → 개발 → 검증 5단계 프로세스를 일관된 방식으로 실행한다.
-
-**트리거:** 개발 프로세스 단계 관련 작업 요청 시 `dev-process-orchestrator` 스킬을 사용하라. 특정 단계 작업은 해당 스킬을 직접 사용한다.
-
-**단계별 스킬:**
-- 플로우 검토, 실패 케이스 발굴 → `flow-review`
-- 케이스 목록 검토, 요구사항 검토 → `feature-validation`
-- DB 스키마, API 명세 설계 → `schema-design`
-- 태스크 구현, 수직 슬라이싱 → `dev-guide`
-- 코드 리뷰, 버그 분석 → `code-review-process`
-- Notion/CLAUDE.md 저장 → `notion-save`
-
-**변경 이력:**
-| 날짜 | 변경 내용 | 대상 | 사유 |
-|------|----------|------|------|
-| 2026-04-11 | 초기 구성 | 전체 | 개발 프로세스 5단계 하네스 구축 |
-| 2026-04-11 | flow-creator 에이전트 + flow-create 스킬 추가 | agents/flow-creator.md, skills/flow-create | 플로우 초안 생성 역할 공백 해소 |
-| 2026-04-11 | feature-planner 에이전트 + feature-planning 스킬 추가 | agents/feature-planner.md, skills/feature-planning | flow-review → feature-validation 사이 기획 생성 역할 공백 해소 |
-| 2026-04-11 | 오케스트레이터 7단계로 확장 | skills/dev-process-orchestrator | 생성 단계(1,3) 추가로 5단계 → 7단계 |
+Available gstack skills:
+`/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`, `/design-shotgun`, `/design-html`, `/review`, `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/browse`, `/connect-chrome`, `/qa`, `/qa-only`, `/design-review`, `/setup-browser-cookies`, `/setup-deploy`, `/retro`, `/investigate`, `/document-release`, `/codex`, `/cso`, `/autoplan`, `/plan-devex-review`, `/devex-review`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`, `/learn`

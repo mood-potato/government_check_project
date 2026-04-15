@@ -1,10 +1,10 @@
 from loguru import logger
 
 from modules.base.base_pipeline import BasePipeline
-from modules.rag.qdrant_loader import QdrantLoader
-from modules.rag.speech_extractor import SpeechVectorExtractor
-from modules.rag.speech_vectorizer import SpeechVectorizer
-from modules.utils.db_connections import get_postgres_connection, get_qdrant_client
+from modules.extract.speech_vector_extractor import SpeechVectorExtractor
+from modules.load.elasticsearch_loader import ElasticsearchLoader
+from modules.transform.speech_vectorizer import SpeechVectorizer
+from modules.utils.db_connections import get_elasticsearch_client, get_postgres_connection
 
 
 class VectorizePipeline(BasePipeline):
@@ -14,24 +14,24 @@ class VectorizePipeline(BasePipeline):
         self,
         batch_size: int = 1000,
         model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-        collection_name: str = "speeches",
+        index_name: str = "speeches",
     ):
         """
         Args:
             batch_size: 한 번에 처리할 발언 수
             model_name: 임베딩 모델
-            collection_name: Qdrant 컬렉션 이름
+            index_name: Elasticsearch 인덱스 이름
         """
         self.pg_connection = get_postgres_connection()
-        self.qdrant_client = get_qdrant_client()
+        self.es_client = get_elasticsearch_client()
 
         extractor = SpeechVectorExtractor(
             connection=self.pg_connection, batch_size=batch_size
         )
         transformer = SpeechVectorizer(model_name=model_name)
-        loader = QdrantLoader(
-            client=self.qdrant_client,
-            collection_name=collection_name,
+        loader = ElasticsearchLoader(
+            client=self.es_client,
+            index_name=index_name,
         )
 
         super().__init__(extractor, loader, transformer)
@@ -61,8 +61,8 @@ class VectorizePipeline(BasePipeline):
             logger.info(f"✅ {len(speeches)}건 임베딩 생성 시작")
             vectorized_speeches = self.transformer.transform(speeches)
 
-            # Step 3: Qdrant에 저장
-            logger.info("✅ Qdrant 저장 시작")
+            # Step 3: Elasticsearch에 저장
+            logger.info("✅ Elasticsearch 저장 시작")
             saved_ids = self.loader.load(vectorized_speeches)
 
             # Step 4: PostgreSQL에 벡터화 상태 업데이트
@@ -78,4 +78,3 @@ class VectorizePipeline(BasePipeline):
         """리소스 정리"""
         if self.pg_connection:
             self.pg_connection.close()
-        # Qdrant 클라이언트는 별도 close 불필요
