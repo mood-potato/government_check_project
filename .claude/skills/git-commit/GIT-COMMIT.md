@@ -5,7 +5,7 @@ description: A skill for writing Git commit messages. It follows rules combining
 
 # Git Commit Message Convention
 
-Utilize this skill when writing Git commit messages to apply Conventional Commits rules and Gitmoji. 그리고 한국어로 적어라.
+Utilize this skill when writing Git commit messages to apply Conventional Commits rules and Gitmoji. 그리고 반드시 한국어로 적어라.
 
 ## When to Use This Skill
 
@@ -77,7 +77,7 @@ Closes #78
 
 ## Guidelines
 
-- **Language**: Write commit messages in English.
+- **Language**: Write commit messages in Korean.
 - **Gitmoji Reference**: [https://gitmoji.dev/](https://gitmoji.dev/)
 - **Clarity**: The Subject explains "what," and the Body explains "why."
 - **Breaking Changes**: Record them in the Footer with the `BREAKING CHANGE:` prefix.
