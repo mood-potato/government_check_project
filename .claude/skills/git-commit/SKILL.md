@@ -76,7 +76,7 @@ Closes #78
 
 ## Guidelines
 
-- **Language**: Write commit messages in English.
+- **Language**: Write commit messages in Korean.
 - **Gitmoji Reference**: [https://gitmoji.dev/](https://gitmoji.dev/)
 - **Clarity**: The Subject explains "what," and the Body explains "why."
 - **Breaking Changes**: Record them in the Footer with the `BREAKING CHANGE:` prefix.
