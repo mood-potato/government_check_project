@@ -1,29 +1,36 @@
 PROJECT_NAME := government_project
+DOCKER_COMPOSE ?= docker compose
 include .env
 export $(shell sed 's/=.*//' .env)
 
 up:
-	docker-compose -p $(PROJECT_NAME) up -d
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) up -d
 
 down:
-	docker-compose -p $(PROJECT_NAME) down
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) down
 
 restart:
-	docker-compose -p $(PROJECT_NAME) down
-	docker-compose -p $(PROJECT_NAME) up -d
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) down
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) up -d
 
 logs:
-	docker-compose -p $(PROJECT_NAME) logs -f
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) logs -f
 
 ps:
-	docker-compose -p $(PROJECT_NAME) ps
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) ps
 
 build:
-	docker-compose -p $(PROJECT_NAME) build
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) build
 
 deploy:
-	docker-compose -p $(PROJECT_NAME) build webapp
-	docker-compose -p $(PROJECT_NAME) up -d
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) build backend frontend
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) up -d
 
-webapp-logs:
-	docker-compose -p $(PROJECT_NAME) logs -f webapp
+backend-logs:
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) logs -f backend
+
+frontend-logs:
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) logs -f frontend
+
+pipeline:
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) --profile pipeline run --rm pipeline
