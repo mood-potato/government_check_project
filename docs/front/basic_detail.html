@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Member Profile - AssemblyVoice</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#1d1b19",
+                        "on-primary-fixed-variant": "#763300",
+                        "on-primary-container": "#6a2d00",
+                        "surface-dim": "#ded9d5",
+                        "background": "#fef8f4",
+                        "tertiary-container": "#00b9e2",
+                        "on-error": "#ffffff",
+                        "inverse-on-surface": "#f5f0ec",
+                        "outline-variant": "#ddc1b3",
+                        "on-secondary-fixed-variant": "#693b1f",
+                        "on-secondary-fixed": "#331200",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#ffdbc9",
+                        "primary-container": "#ff8c42",
+                        "on-surface-variant": "#564338",
+                        "secondary-fixed": "#ffdbc9",
+                        "primary": "#9b4500",
+                        "tertiary-fixed": "#b7eaff",
+                        "secondary": "#845234",
+                        "secondary-fixed-dim": "#fab893",
+                        "surface-container": "#f3ede9",
+                        "outline": "#897266",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#00677f",
+                        "surface-container-highest": "#e7e1de",
+                        "on-tertiary-fixed-variant": "#004e60",
+                        "on-secondary-container": "#79482b",
+                        "tertiary-fixed-dim": "#4cd6ff",
+                        "on-background": "#1d1b19",
+                        "surface-variant": "#e7e1de",
+                        "surface-bright": "#fef8f4",
+                        "on-tertiary-fixed": "#001f28",
+                        "inverse-surface": "#32302e",
+                        "on-primary-fixed": "#331200",
+                        "on-tertiary-container": "#004556",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#ede7e3",
+                        "primary-fixed-dim": "#ffb68d",
+                        "surface-tint": "#9b4500",
+                        "error": "#ba1a1a",
+                        "surface": "#fef8f4",
+                        "secondary-container": "#fdbb96",
+                        "inverse-primary": "#ffb68d",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f8f2ef",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Be Vietnam Pro"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .editorial-shadow {
+            box-shadow: 0 12px 40px rgba(155, 69, 0, 0.06);
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #9b4500 0%, #ff8c42 100%);
+        }
+        .glass-nav {
+            background-color: rgba(255, 249, 245, 0.7);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 glass-nav shadow-[0_12px_40px_rgba(155,69,0,0.06)]">
+<div class="flex justify-between items-center max-w-7xl mx-auto px-8 h-20">
+<div class="text-2xl font-bold tracking-tighter text-orange-900 font-headline">AssemblyVoice</div>
+<div class="hidden md:flex items-center space-x-8 font-headline font-semibold text-sm tracking-tight">
+<a class="text-stone-600 hover:text-orange-600 transition-all duration-300 rounded-full px-3 py-1" href="#">Home</a>
+<a class="text-orange-700 border-b-2 border-orange-500 pb-1" href="#">Members</a>
+<a class="text-stone-600 hover:text-orange-600 transition-all duration-300 rounded-full px-3 py-1" href="#">Legislation</a>
+<a class="text-stone-600 hover:text-orange-600 transition-all duration-300 rounded-full px-3 py-1" href="#">Committees</a>
+</div>
+<div class="flex items-center space-x-4">
+<button class="p-2 hover:bg-orange-50 transition-all duration-300 rounded-full scale-95 active:scale-90">
+<span class="material-symbols-outlined text-orange-600">search</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container/20">
+<img alt="User profile" data-alt="Close-up professional portrait of a smiling middle-aged man with short dark hair in a crisp white shirt, clean lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtXjEuFsuaWsk5LhZ0Zxt9vUvFC3Bivyt6am7C5IXW7D41ojQ0wzBJSkRbphun2bOgz8w9v4C_QqKaeFq1I1ADo9oGJ3Cfhxlf0Bzuj03A30MpvGir1V_iM9oX5cqCFrHmyDCyl0wuq2WfTWpGzgWptzGrsX5HG6RWdHwMPRcAAYaRDnUdQBWWTUnstjigJYuRFuBrhUyKm9cgwsASsHQ8yEn0k9rITP5nEx0BllhrDbYBM5ECEBj38cQ7olLCg9ZFxv2FXDlDDiVf"/>
+</div>
+</div>
+</div>
+</nav>
+<main class="pt-32 pb-20 max-w-7xl mx-auto px-6 lg:px-12">
+<!-- Profile Hero Section -->
+<section class="flex flex-col md:flex-row gap-12 items-start mb-20">
+<div class="relative group">
+<div class="absolute inset-0 signature-gradient rounded-xl rotate-3 scale-105 opacity-10 group-hover:rotate-6 transition-transform duration-500"></div>
+<div class="relative w-64 h-80 overflow-hidden rounded-xl shadow-xl">
+<img class="w-full h-full object-cover" data-alt="A formal portrait of a charismatic male assembly member in a tailored navy suit against a soft cream studio background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3FZ-gnurV-2B_39GtGyRP5kP_uq9LmxTuoPERO8ah6GOsyA5M6Iulv8NJabUkK_vZwqwuGxV2lUrQ6PDf6TY1xumsp3UXGIv103-nc2szRoDiUwQbFTCzUOpLmAUF9gMfN45Oh4DjLz6b8mFZoR3UHXUQe9Iv1BzbAvhGqOE4J5pjjz6jnlZaq1b3YFpQDfC5ffuO8ZyCPgldY8cuBEQC5nC4pCFNos-eDu2Qw5h0-6Ejqh99MrXeHo7CqVb-TH32vI-BLHv8u78f"/>
+</div>
+</div>
+<div class="flex-1 space-y-6">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-3 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant text-xs font-bold uppercase tracking-wider">Active Member</span>
+<span class="text-secondary font-semibold">제22대 국회의원</span>
+</div>
+<h1 class="text-5xl md:text-6xl font-extrabold font-headline tracking-tighter text-on-surface">김서준 의원</h1>
+<p class="text-lg text-secondary font-medium">더불어행복당 · 서울 마포구 갑 · 기획재정위원회</p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-lg border-l-4 border-primary-container italic text-on-surface-variant font-medium">
+                    "최근 2년간 부동산·노동 쟁점 회의에 반복적으로 참여한 의원"
+                </div>
+<div class="flex flex-wrap gap-4 pt-2">
+<button class="signature-gradient text-on-primary px-8 py-3 rounded-full font-bold shadow-lg hover:shadow-primary/20 transition-all scale-100 active:scale-95 flex items-center gap-2">
+<span class="material-symbols-outlined">forum</span> 최근 발언 보기
+                    </button>
+<button class="bg-surface-container-high text-on-secondary-container px-8 py-3 rounded-full font-bold hover:bg-surface-container-highest transition-all scale-100 active:scale-95 flex items-center gap-2">
+<span class="material-symbols-outlined">list_alt</span> 참여 안건 보기
+                    </button>
+</div>
+</div>
+</section>
+<!-- Key Summary Bar -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
+<div class="bg-surface-container-lowest p-6 rounded-lg editorial-shadow border border-outline-variant/10">
+<p class="text-stone-500 text-xs font-bold uppercase tracking-widest mb-2 font-headline">자주 등장한 쟁점</p>
+<p class="text-2xl font-bold text-primary font-headline">부동산 취득세</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg editorial-shadow border border-outline-variant/10">
+<p class="text-stone-500 text-xs font-bold uppercase tracking-widest mb-2 font-headline">참여 회의 수</p>
+<div class="flex items-baseline gap-1">
+<p class="text-3xl font-bold text-on-surface font-headline">142</p>
+<p class="text-stone-500 font-medium">건</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg editorial-shadow border border-outline-variant/10">
+<p class="text-stone-500 text-xs font-bold uppercase tracking-widest mb-2 font-headline">상반 발언 후보</p>
+<div class="flex items-baseline gap-1 text-tertiary">
+<p class="text-3xl font-bold font-headline">12</p>
+<p class="font-medium">건</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg editorial-shadow border border-outline-variant/10">
+<p class="text-stone-500 text-xs font-bold uppercase tracking-widest mb-2 font-headline">최근 발언 시점</p>
+<p class="text-xl font-bold text-on-surface font-headline">2일 전 (14:30)</p>
+</div>
+</section>
+<!-- Conflict Stances -->
+<section class="mb-24">
+<div class="mb-10">
+<h2 class="text-3xl font-bold font-headline tracking-tight mb-2">이 사람이 자주 선 갈등</h2>
+<p class="text-stone-500">주요 쟁점별 상충되는 의견을 가졌던 대화 상대와 시점입니다.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Conflict Card 1 -->
+<div class="bg-white rounded-lg p-8 shadow-[0_24px_48px_rgba(155,69,0,0.04)] hover:translate-y-[-4px] transition-transform duration-300 border border-surface-container">
+<div class="flex justify-between items-start mb-6">
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-bold">노동법 개정안</span>
+<span class="text-stone-400 text-xs">2024.11.12</span>
+</div>
+<p class="text-sm font-semibold text-stone-500 mb-4">기획재정위원회 제3차 회의</p>
+<div class="flex items-center gap-3 mb-6 bg-surface-container-low p-3 rounded-lg">
+<div class="w-8 h-8 rounded-full bg-stone-200"></div>
+<div>
+<p class="text-xs text-stone-500">Conflict with</p>
+<p class="text-sm font-bold">이영호 의원 (국민의힘)</p>
+</div>
+</div>
+<blockquote class="text-on-surface font-medium leading-relaxed italic border-l-2 border-primary-container pl-4">
+                        "노동자의 유연한 권리 보장이 우선되지 않는다면 경제 활성화는 허상입니다."
+                    </blockquote>
+</div>
+<!-- Conflict Card 2 -->
+<div class="bg-white rounded-lg p-8 shadow-[0_24px_48px_rgba(155,69,0,0.04)] hover:translate-y-[-4px] transition-transform duration-300 border border-surface-container">
+<div class="flex justify-between items-start mb-6">
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-bold">종부세 완화</span>
+<span class="text-stone-400 text-xs">2024.10.05</span>
+</div>
+<p class="text-sm font-semibold text-stone-500 mb-4">본회의 정기국회</p>
+<div class="flex items-center gap-3 mb-6 bg-surface-container-low p-3 rounded-lg">
+<div class="w-8 h-8 rounded-full bg-stone-200"></div>
+<div>
+<p class="text-xs text-stone-500">Conflict with</p>
+<p class="text-sm font-bold">박지현 장관</p>
+</div>
+</div>
+<blockquote class="text-on-surface font-medium leading-relaxed italic border-l-2 border-primary-container pl-4">
+                        "세수 확보라는 명목 하에 중산층의 부담을 가중시키는 처사입니다."
+                    </blockquote>
+</div>
+<!-- Conflict Card 3 -->
+<div class="bg-white rounded-lg p-8 shadow-[0_24px_48px_rgba(155,69,0,0.04)] hover:translate-y-[-4px] transition-transform duration-300 border border-surface-container">
+<div class="flex justify-between items-start mb-6">
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-bold">R&amp;D 예산</span>
+<span class="text-stone-400 text-xs">2024.09.21</span>
+</div>
+<p class="text-sm font-semibold text-stone-500 mb-4">예산결산특별위원회</p>
+<div class="flex items-center gap-3 mb-6 bg-surface-container-low p-3 rounded-lg">
+<div class="w-8 h-8 rounded-full bg-stone-200"></div>
+<div>
+<p class="text-xs text-stone-500">Conflict with</p>
+<p class="text-sm font-bold">김민석 의원 (무소속)</p>
+</div>
+</div>
+<blockquote class="text-on-surface font-medium leading-relaxed italic border-l-2 border-primary-container pl-4">
+                        "미래 동력을 깎아먹는 예산 삭감은 국가적 자살 행위와 다름없습니다."
+                    </blockquote>
+</div>
+</div>
+</section>
+<!-- Contradictory Statement Section -->
+<section class="mb-24 bg-surface-container-low rounded-xl p-10 md:p-16 relative overflow-hidden">
+<div class="relative z-10">
+<div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+<div>
+<h2 class="text-3xl font-bold font-headline tracking-tight text-on-primary-container mb-2">상반 발언 분석</h2>
+<p class="text-stone-600">동일 의원의 과거와 현재 발언 중 논리적 변화가 감지된 구간입니다.</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="flex items-center gap-2 text-xs font-bold text-orange-800/60 bg-orange-100/50 px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span> 자동 분석으로 비교된 발언
+                        </span>
+<button class="text-xs font-semibold underline text-primary">원문 맥락 확인</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-outline-variant/30 rounded-lg overflow-hidden border border-outline-variant/30">
+<div class="bg-white p-8">
+<div class="flex items-center gap-2 mb-4">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<p class="text-sm font-bold text-secondary">2024년 1월 발언</p>
+</div>
+<p class="text-lg font-medium leading-relaxed text-on-surface">
+                            "주택 담보 대출 규제는 시장 안정을 위해 유지되어야 하며, 인위적인 완화는 투기 심리만 자극할 뿐입니다."
+                        </p>
+<p class="mt-6 text-xs text-stone-400 font-medium">기획재정위원회 제1차 회의록 중</p>
+</div>
+<div class="bg-white p-8">
+<div class="flex items-center gap-2 mb-4">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<p class="text-sm font-bold text-primary">2026년 3월 발언 (예상)</p>
+</div>
+<p class="text-lg font-medium leading-relaxed text-on-surface">
+                            "지나친 대출 규제가 실수요자의 주거 사다리를 걷어차고 있습니다. 이제는 과감한 규제 혁파가 필요한 시점입니다."
+                        </p>
+<p class="mt-6 text-xs text-stone-400 font-medium">경제 활성화 대책 공청회 중</p>
+</div>
+</div>
+</div>
+<!-- Decorative Element -->
+<div class="absolute -right-20 -bottom-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
+</section>
+<!-- Participation Agenda Section -->
+<section class="mb-24">
+<h2 class="text-3xl font-bold font-headline tracking-tight mb-10">참여 안건 기록</h2>
+<div class="space-y-4">
+<!-- Agenda Items -->
+<div class="group bg-white p-6 rounded-lg editorial-shadow flex flex-col md:flex-row justify-between items-center gap-6 border border-transparent hover:border-primary-container/20 transition-all">
+<div class="flex-1">
+<h3 class="text-lg font-bold mb-1">탄소 중립 실천 촉진법</h3>
+<div class="flex gap-4 text-xs text-stone-500 font-medium">
+<span>참여 회의 8회</span>
+<span>최근 언급: 2024.11.01</span>
+</div>
+</div>
+<div class="flex-[1.5] text-sm text-stone-600 bg-surface-container-low px-4 py-3 rounded-lg">
+                        실질적인 탄소 배출 감소를 위한 인센티브 구조 도입을 지속적으로 강조함.
+                    </div>
+<button class="p-3 rounded-full hover:bg-orange-50 text-primary transition-colors">
+<span class="material-symbols-outlined">arrow_forward_ios</span>
+</button>
+</div>
+<div class="group bg-white p-6 rounded-lg editorial-shadow flex flex-col md:flex-row justify-between items-center gap-6 border border-transparent hover:border-primary-container/20 transition-all">
+<div class="flex-1">
+<h3 class="text-lg font-bold mb-1">반도체 산업 지원 특별법</h3>
+<div class="flex gap-4 text-xs text-stone-500 font-medium">
+<span>참여 회의 15회</span>
+<span>최근 언급: 2024.10.15</span>
+</div>
+</div>
+<div class="flex-[1.5] text-sm text-stone-600 bg-surface-container-low px-4 py-3 rounded-lg">
+                        글로벌 경쟁력 확보를 위한 세액 공제 혜택 확대를 주된 논리로 내세움.
+                    </div>
+<button class="p-3 rounded-full hover:bg-orange-50 text-primary transition-colors">
+<span class="material-symbols-outlined">arrow_forward_ios</span>
+</button>
+</div>
+<div class="group bg-white p-6 rounded-lg editorial-shadow flex flex-col md:flex-row justify-between items-center gap-6 border border-transparent hover:border-primary-container/20 transition-all">
+<div class="flex-1">
+<h3 class="text-lg font-bold mb-1">청년 일자리 매칭 플랫폼 구축</h3>
+<div class="flex gap-4 text-xs text-stone-500 font-medium">
+<span>참여 회의 4회</span>
+<span>최근 언급: 2024.08.30</span>
+</div>
+</div>
+<div class="flex-[1.5] text-sm text-stone-600 bg-surface-container-low px-4 py-3 rounded-lg">
+                        단순 지원금보다는 민관 협력을 통한 지속 가능한 일자리 생태계 조성을 주장함.
+                    </div>
+<button class="p-3 rounded-full hover:bg-orange-50 text-primary transition-colors">
+<span class="material-symbols-outlined">arrow_forward_ios</span>
+</button>
+</div>
+<div class="group bg-white p-6 rounded-lg editorial-shadow flex flex-col md:flex-row justify-between items-center gap-6 border border-transparent hover:border-primary-container/20 transition-all">
+<div class="flex-1">
+<h3 class="text-lg font-bold mb-1">디지털 자산 투자자 보호법</h3>
+<div class="flex gap-4 text-xs text-stone-500 font-medium">
+<span>참여 회의 11회</span>
+<span>최근 언급: 2024.11.10</span>
+</div>
+</div>
+<div class="flex-[1.5] text-sm text-stone-600 bg-surface-container-low px-4 py-3 rounded-lg">
+                        거래소의 투명성 강화와 투자자 교육 프로그램 의무화를 제안함.
+                    </div>
+<button class="p-3 rounded-full hover:bg-orange-50 text-primary transition-colors">
+<span class="material-symbols-outlined">arrow_forward_ios</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Network Analysis (Similar/Opposing) -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+<!-- Similar Members -->
+<div>
+<h3 class="text-2xl font-bold font-headline mb-8 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-weight="fill">handshake</span>
+                    논리가 유사한 의원
+                </h3>
+<div class="space-y-4">
+<div class="bg-surface-container-lowest p-6 rounded-lg editorial-shadow flex items-center gap-5">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="Close-up portrait of a professional man with glasses, neutral expression, soft lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTdm0L_uU0Xa68_KD2gPWkAP6OVBfGDIy96kM9WNw969716n73-TuLJMGlK2Rrsor7uQToZlAx5-xvGHqOnxJtQcpqxsD-i5xBjHSACHnTZjZh7w9X_SDqP9W0CnmDw8V9u0OtNPLTUAOPfRnO_3QALnmgsHHhRjuXPSSo6KcvJvbEZH0DUAMVdIaeW3A8ibMBivk2n0SJOqrcNlq0A3XewViPrje4RdkUG34VoIaZG_fNEj0gUyfqBO9EFOqHtvgFYyDOKYJU3aOU"/>
+<div class="flex-1">
+<h4 class="font-bold text-on-surface">정민호 의원</h4>
+<p class="text-xs text-stone-500">부동산 세제, 신산업 규제 완화</p>
+</div>
+<div class="text-right">
+<p class="text-primary font-bold">84%</p>
+<p class="text-[10px] text-stone-400 font-bold uppercase tracking-tighter">Match</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg editorial-shadow flex items-center gap-5">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="Professional portrait of a woman with short hair and a black blazer, serious expression." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGI6e6O7tOt9BCM6uIbzjFrcplwBK3cMFA1XnfHLyIPY8Y6WVF5DgqOTkZfE3clHKPGjXRU-8Xp6291bvJHOhUqhme2oTVzunPdfFXLqywfwLrL1Mt7tIm-_gxylCIiFH9mbgWWanyy8dT7nRBWo-5MpYLBPVVMC__30zdnlGtp6N7MgWRZeuCt19eM6EGTOM0Brco6H7E8mcJmHJ1y6Iew3_5c2BRfMjHvMBx70lzwYYNn0xQ4UbntiAhHumeCcWlY8m3tk-wny3k"/>
+<div class="flex-1">
+<h4 class="font-bold text-on-surface">한예슬 의원</h4>
+<p class="text-xs text-stone-500">금융 소비자 보호, 탄소 중립</p>
+</div>
+<div class="text-right">
+<p class="text-primary font-bold">76%</p>
+<p class="text-[10px] text-stone-400 font-bold uppercase tracking-tighter">Match</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Opposing Members -->
+<div>
+<h3 class="text-2xl font-bold font-headline mb-8 flex items-center gap-3">
+<span class="material-symbols-outlined text-error" data-weight="fill">swords</span>
+                    주요 갈등 상대
+                </h3>
+<div class="space-y-4">
+<div class="bg-surface-container-lowest p-6 rounded-lg editorial-shadow flex items-center gap-5 border-l-4 border-error/20">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="Middle-aged man in a suit looking directly at the camera, stern professional expression." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNQcfveeyTiMninfKDnHsWwYGVORyQAchkAlpQqnmmcGSZ-_1MFppgzkRE3uKPqv7ji9gSCCQz2ob2-CcAXq8cGl9zyJYhb0XDOvTlgYX_iYEhTNp60geMeBE9PnERM1OPIRE_nkVMHQ5wEPPXhUL8bfBpZ_hEfWKIGnj4xPQy7AISpexLMIrxKF_0TieUeaUdUijFrrB-yJzXKxAaLw4Ph0YnY6XREgFkRCV1c-Sg7C58tJ7iUbjMeko_5_bMYJvJlF1mokAR5l1o"/>
+<div class="flex-1">
+<h4 class="font-bold text-on-surface">이영호 의원</h4>
+<p class="text-xs text-stone-500">노동 유연성 vs 보호 강화</p>
+</div>
+<div class="text-right">
+<p class="text-error font-bold">24회</p>
+<p class="text-[10px] text-stone-400 font-bold uppercase tracking-tighter">Conflicts</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg editorial-shadow flex items-center gap-5 border-l-4 border-error/20">
+<img class="w-14 h-14 rounded-full object-cover" data-alt="Corporate headshot of a woman with long dark hair, professional and focused look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTbGlCmr-Je_1wfIimad_ZgMN9eNEY70011rKZEXZMTzZRyxRdWjVd-Gd_8oOzrpt3PAD5CHbn6WECuhhCBS_lQhqZzD_7zDtrzOIAblUWLRMNPqAm4pXkQVjOegOODx81zSmbpI2pvmjcl_oQBIF6MvqWaI2iRH7MgaRjlc7RaUoKxOUJ__no2c2hCirV_tzVd4NPIUlP8l1UA_3ghDWsoqbev6mgsj7oembyQMyCBAsLz5mupFtbMdN9auhSYEfI_kCcxcXuiJ_c"/>
+<div class="flex-1">
+<h4 class="font-bold text-on-surface">김지수 의원</h4>
+<p class="text-xs text-stone-500">교육 재산 배분, 복지 확대</p>
+</div>
+<div class="text-right">
+<p class="text-error font-bold">18회</p>
+<p class="text-[10px] text-stone-400 font-bold uppercase tracking-tighter">Conflicts</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom Principle Notice -->
+<div class="mt-24 p-6 bg-surface-container-low rounded-lg text-center">
+<p class="text-stone-500 text-sm font-medium flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-stone-400 text-lg">info</span>
+                자동 분석 결과이며, 원문과 회의 맥락을 함께 확인하세요.
+            </p>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full rounded-t-[3rem] mt-20 bg-[#F8F2EF]">
+<div class="flex flex-col md:flex-row justify-between items-center py-12 px-12 max-w-7xl mx-auto">
+<div class="mb-8 md:mb-0 space-y-2">
+<div class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-orange-900">AssemblyVoice</div>
+<p class="font-['Be_Vietnam_Pro'] text-sm text-stone-500 max-w-xs">
+                    © 2024 The Cultivated Hearth. Bridging the gap between citizens and assembly.
+                </p>
+</div>
+<div class="flex flex-wrap justify-center gap-8 font-['Be_Vietnam_Pro'] text-sm">
+<a class="text-stone-500 hover:text-orange-600 transition-opacity" href="#">Privacy Policy</a>
+<a class="text-stone-500 hover:text-orange-600 transition-opacity" href="#">Terms of Service</a>
+<a class="text-stone-500 hover:text-orange-600 transition-opacity" href="#">Accessibility</a>
+<a class="text-stone-500 hover:text-orange-600 transition-opacity" href="#">Contact Us</a>
+</div>
+</div>
+</footer>
+</body></html>
