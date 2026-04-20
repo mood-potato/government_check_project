@@ -23,5 +23,5 @@ Phase 2/3 아이디어 및 기술 부채. 현재 스코프 밖.
 
 ## 기술 부채
 
-- [ ] `except Exception as e` 패턴 정리 (`modules/rag/search_service.py` 포함) — 구체적 예외 타입으로 교체.
-- [ ] `modules/load/pdf_to_speech_loader.py:9` TODO 해결 — pdfurl 상태 업데이트 로직 검토.
+- [ ] `except Exception as e` 패턴 정리 (`backend/modules/search/search_service.py` 포함) — 구체적 예외 타입으로 교체.
+- [ ] `backend/modules/load/pdf_to_speech_loader.py:9` TODO 해결 — pdfurl 상태 업데이트 로직 검토.

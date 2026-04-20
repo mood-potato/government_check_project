@@ -23,7 +23,7 @@ pytest
 pytest test/unit/test_transformers.py -v
 
 # Run with coverage
-pytest --cov=modules
+pytest --cov=backend.modules
 ```
 
 ### Docker (Infrastructure)
@@ -37,9 +37,9 @@ make ps        # List running containers
 
 ### Running Pipelines
 ```python
-from modules.pipeline.schedule_to_pdf_pipeline import ScheduleToPDFPipeline
-from modules.pipeline.pdf_to_speech_pipeline import PDFToSpeechPipeline
-from modules.pipeline.vectorize_pipeline import VectorizePipeline
+from backend.modules.pipeline.schedule_to_pdf_pipeline import ScheduleToPDFPipeline
+from backend.modules.pipeline.pdf_to_speech_pipeline import PDFToSpeechPipeline
+from backend.modules.pipeline.vectorize_pipeline import VectorizePipeline
 
 # 1. Extract congress schedule and PDF URLs (incremental by default)
 ScheduleToPDFPipeline(unit_cd="22").run()
@@ -65,7 +65,7 @@ streamlit run app/streamlit_app.py
 ## Architecture
 
 ### ETL Pipeline Pattern
-The codebase follows an ETL (Extract-Transform-Load) pattern with abstract base classes in `modules/base/`:
+The codebase follows an ETL (Extract-Transform-Load) pattern with abstract base classes in `backend/modules/base/`:
 
 - **BaseExtractor**: Extracts raw data from APIs or files
 - **BaseTransformer**: Transforms raw data into structured format
@@ -74,29 +74,29 @@ The codebase follows an ETL (Extract-Transform-Load) pattern with abstract base 
 
 ### Main Pipelines
 
-1. **ScheduleToPDFPipeline** (`modules/pipeline/schedule_to_pdf_pipeline.py`)
+1. **ScheduleToPDFPipeline** (`backend/modules/pipeline/schedule_to_pdf_pipeline.py`)
    - Fetches congress meeting schedules from Open Assembly API
    - Extracts PDF URLs for meeting transcripts
    - Supports incremental updates (`incremental=True`) and date filtering (`days_back=N`)
 
-2. **PDFToSpeechPipeline** (`modules/pipeline/pdf_to_speech_pipeline.py`)
+2. **PDFToSpeechPipeline** (`backend/modules/pipeline/pdf_to_speech_pipeline.py`)
    - Downloads PDFs from stored URLs
    - Extracts text using pdfplumber
    - Parses individual speeches (speaker + text)
    - Optional: LLM-based summarization (`enable_summary=True`)
 
-3. **VectorizePipeline** (`modules/pipeline/vectorize_pipeline.py`)
+3. **VectorizePipeline** (`backend/modules/pipeline/vectorize_pipeline.py`)
    - Extracts unvectorized speeches from PostgreSQL
    - Generates embeddings using sentence-transformers
    - Stores vectors in Qdrant for semantic search
 
 ### RAG/Vector Search
-- `modules/rag/search_service.py` - Semantic search with filters (speaker, date)
-- `modules/rag/speech_vectorizer.py` - sentence-transformers embeddings
-- `modules/rag/qdrant_loader.py` - Qdrant vector storage
+- `backend/modules/search/search_service.py` - Semantic search with filters (speaker, date)
+- `backend/modules/transform/speech_vectorizer.py` - sentence-transformers embeddings
+- `backend/modules/load/elasticsearch_loader.py` - Elasticsearch vector storage
 
 ### LLM Integration
-- `modules/llm/summarizer.py` - OpenAI GPT-based speech summarization
+- `backend/modules/utils/summarizer.py` - OpenAI GPT-based speech summarization
 
 ## Database Schema
 
@@ -127,14 +127,13 @@ QDRANT_PORT=6333
 
 ## Key Directories
 
-- `modules/` - Core ETL pipeline code
+- `backend/modules/` - Core ETL pipeline code
   - `base/` - Abstract base classes
   - `extract/` - Data extractors
   - `transform/` - Data transformers
   - `load/` - Data loaders
   - `pipeline/` - Pipeline orchestration
-  - `rag/` - Vector search components
-  - `llm/` - LLM integration
+  - `search/` - Vector search service
   - `utils/` - Helpers (db_connections, incremental_helpers)
 - `app/` - React dashboard
 - `test/` - pytest tests (unit/, integration/)

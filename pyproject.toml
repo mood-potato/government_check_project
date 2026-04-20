@@ -28,6 +28,7 @@ dependencies = [
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
+pythonpath = ["."]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 markers = [
