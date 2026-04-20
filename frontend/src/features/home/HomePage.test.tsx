@@ -12,8 +12,11 @@ describe("HomePage", () => {
     expect(html).toContain("DEMOCRACY IS YOUR VOICE HEARD");
     expect(html).toContain("최근 포착된");
     expect(html).toContain("상반 발언");
-    expect(html).toContain("Search members, legislation...");
-    expect(html).toContain("Hot Topics:");
+    expect(html).toContain("의원 이름이나 쟁점으로 검색");
+    expect(html).toContain('class="hero-search"');
+    expect(html).not.toContain("Hot Topics:");
+    expect(html).not.toContain('class="nav-links"');
+    expect(html).not.toContain('class="nav-search"');
     expect(html).toContain("최근 업데이트");
     expect(html).toContain("자동 분석");
     expect(html).toContain("김태호 의원");

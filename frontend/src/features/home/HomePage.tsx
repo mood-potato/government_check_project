@@ -104,20 +104,6 @@ export function HomePage({ data }: HomePageProps) {
           <a className="brand" href="/">
             AssemblyVoice
           </a>
-          <div className="nav-links" aria-label="주요 메뉴">
-            <a className="active" href="/">
-              Home
-            </a>
-            <a href="/members">Members</a>
-            <a href="/legislation">Legislation</a>
-            <a href="/committees">Committees</a>
-          </div>
-          <form className="nav-search" action="/search" role="search">
-            <span className="material-symbols-outlined" aria-hidden="true">
-              search
-            </span>
-            <input name="q" type="search" placeholder="Search members, legislation..." aria-label="의원과 법안 검색" />
-          </form>
         </div>
       </nav>
 
@@ -131,18 +117,13 @@ export function HomePage({ data }: HomePageProps) {
             투표 전에, 지금 비교해보세요. AssemblyVoice가 인공지능으로 공직자의 발언 일관성을 투명하게
             분석합니다.
           </p>
+          <form className="hero-search" action="/search" role="search">
+            <span className="material-symbols-outlined" aria-hidden="true">
+              search
+            </span>
+            <input name="q" type="search" placeholder="의원 이름이나 쟁점으로 검색" aria-label="의원 이름이나 쟁점으로 검색" />
+          </form>
         </header>
-
-        {data.popular_keywords.length > 0 ? (
-          <section className="topic-row" aria-label="인기 검색어">
-            <span>Hot Topics:</span>
-            {data.popular_keywords.map((keyword) => (
-              <a key={keyword.slug} href={`/topics/${keyword.slug}`}>
-                {keyword.label}
-              </a>
-            ))}
-          </section>
-        ) : null}
 
         {data.hero ? <HeroCard hero={data.hero} /> : <EmptyHeroCard />}
 

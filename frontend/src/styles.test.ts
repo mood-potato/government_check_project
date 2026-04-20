@@ -18,4 +18,12 @@ test("keeps the fixed header translucent like the source home page", () => {
 
   expect(topNavStyles).toContain("position: fixed");
   expect(topNavStyles).toContain("backdrop-filter");
+  expect(styles).not.toContain(".top-nav {\n    position: static;");
+});
+
+test("keeps the home headline below oversized landing-page scale", () => {
+  const heroHeadlineStyles = styles.match(/\.page-hero h1\s*\{[^}]*\}/)?.[0] ?? "";
+
+  expect(heroHeadlineStyles).toContain("clamp(2.4rem");
+  expect(heroHeadlineStyles).not.toContain("6.5rem");
 });

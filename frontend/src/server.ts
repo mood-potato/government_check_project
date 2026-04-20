@@ -1,6 +1,9 @@
 import index from "../index.html";
 
+const port = Number(process.env.PORT ?? "3000");
+
 Bun.serve({
+  port: port,
   routes: {
     "/*": index
   },
@@ -10,4 +13,4 @@ Bun.serve({
   }
 });
 
-console.log("AssemblyVoice frontend running at http://localhost:3000");
+console.log(`AssemblyVoice frontend running at http://localhost:${port}`);
