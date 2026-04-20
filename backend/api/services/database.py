@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from typing import Any
 
-from backend.modules.utils.db_connections import get_postgres_connection
+from pipelines.utils.db_connections import get_postgres_connection
 
 
 class Database:

@@ -1,6 +1,6 @@
 from backend.api.services.database import Database
-from backend.modules.utils.db_connections import get_elasticsearch_client
-from backend.modules.search.search_service import SpeechSearchService
+from pipelines.utils.db_connections import get_elasticsearch_client
+from pipelines.search.search_service import SpeechSearchService
 
 
 def get_db():
