@@ -40,3 +40,11 @@
   - 홈은 `비교 1개`를 렌더링할 수 있을 만큼만 준다.
   - 상세는 `프로필 + 갈등 + 참여 안건`을 렌더링할 수 있을 만큼만 준다.
 - 프런트엔드가 DB 구조를 직접 조립하지 않도록, API는 화면 단위 DTO를 반환한다.
+
+## Pipeline Structure
+
+- 새 수집 파이프라인은 `pipelines/<feature>_pipeline.py` 한 파일에 둔다.
+- 같은 기능의 extractor, transformer, loader, pipeline 클래스는 한 파일에 함께 둔다.
+- 공통 추상 클래스는 `pipelines/base.py` 한 파일에 둔다.
+- extractor/transformer/loader 폴더 분리는 재사용이나 복잡도가 실제로 커졌을 때만 한다.
+- 파이프라인 함수와 클래스 docstring은 Google 스타일을 유지하되 설명은 한국어로 작성한다.

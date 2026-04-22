@@ -34,6 +34,5 @@ GitHub 원격 저장소와 Supabase 원격 프로젝트는 별개다. `git push`
 - `supabase/seed.sql` 재생성은 repo root에서 다음 명령으로 한다.
 
 ```bash
-.venv/bin/python -m pipelines.load.speaker_seed
+.venv/bin/python -m pipelines.speaker_seed
 ```
-

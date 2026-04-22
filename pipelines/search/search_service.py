@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from elasticsearch import Elasticsearch
 from loguru import logger
 
-from pipelines.transform.speech_vectorizer import SpeechVectorizer
+from pipelines.vectorize_pipeline import SpeechVectorizer
 
 
 class SpeechSearchService:

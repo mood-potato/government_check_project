@@ -55,10 +55,11 @@ def _fetch_single_page(url, base_params, key_name, date_key, date_value, page_si
             logger.error(f"❌ 예상된 키({key_name})가 응답 데이터에 없습니다.")
             return []
 
-        rows = data[key_name][1]["row"]
+        rows = data[key_name][1].get("row", [])
+        if isinstance(rows, dict):
+            rows = [rows]
         logger.info(f"✅ {pIndex} 페이지 데이터 추가 (총 {len(rows)}개)")
         return rows
     except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError, IndexError) as e:
         logger.error(f"❌ 페이지 {pIndex} 처리 실패: {e}")
         return []
-    
