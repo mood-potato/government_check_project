@@ -190,3 +190,4 @@ key_changes.json
 ._.DS_Store
 **/.DS_Store
 **/._.DS_Store
+.gstack/

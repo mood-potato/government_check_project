@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AssemblyVoice - Democracy is Your Voice Heard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#1d1b19",
+                        "on-primary-fixed-variant": "#763300",
+                        "on-primary-container": "#6a2d00",
+                        "surface-dim": "#ded9d5",
+                        "background": "#fef8f4",
+                        "tertiary-container": "#00b9e2",
+                        "on-error": "#ffffff",
+                        "inverse-on-surface": "#f5f0ec",
+                        "outline-variant": "#ddc1b3",
+                        "on-secondary-fixed-variant": "#693b1f",
+                        "on-secondary-fixed": "#331200",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#ffdbc9",
+                        "primary-container": "#ff8c42",
+                        "on-surface-variant": "#564338",
+                        "secondary-fixed": "#ffdbc9",
+                        "primary": "#9b4500",
+                        "tertiary-fixed": "#b7eaff",
+                        "secondary": "#845234",
+                        "secondary-fixed-dim": "#fab893",
+                        "surface-container": "#f3ede9",
+                        "outline": "#897266",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#00677f",
+                        "surface-container-highest": "#e7e1de",
+                        "on-tertiary-fixed-variant": "#004e60",
+                        "on-secondary-container": "#79482b",
+                        "tertiary-fixed-dim": "#4cd6ff",
+                        "on-background": "#1d1b19",
+                        "surface-variant": "#e7e1de",
+                        "surface-bright": "#fef8f4",
+                        "on-tertiary-fixed": "#001f28",
+                        "inverse-surface": "#32302e",
+                        "on-primary-fixed": "#331200",
+                        "on-tertiary-container": "#004556",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#ede7e3",
+                        "primary-fixed-dim": "#ffb68d",
+                        "surface-tint": "#9b4500",
+                        "error": "#ba1a1a",
+                        "surface": "#fef8f4",
+                        "secondary-container": "#fdbb96",
+                        "inverse-primary": "#ffb68d",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f8f2ef",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Be Vietnam Pro"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #9b4500 0%, #ff8c42 100%);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#FFF9F5]/70 dark:bg-stone-900/70 backdrop-blur-2xl shadow-[0_12px_40px_rgba(155,69,0,0.06)]">
+<div class="flex justify-between items-center max-w-7xl mx-auto px-8 h-20">
+<div class="text-2xl font-bold tracking-tighter text-orange-900 dark:text-orange-50 font-headline">AssemblyVoice</div>
+<div class="hidden md:flex items-center gap-8 font-['Plus_Jakarta_Sans'] font-semibold text-sm tracking-tight">
+<a class="text-orange-700 dark:text-orange-400 border-b-2 border-orange-500 pb-1" href="#">Home</a>
+<a class="text-stone-600 dark:text-stone-400 hover:text-orange-600" href="#">Members</a>
+<a class="text-stone-600 dark:text-stone-400 hover:text-orange-600" href="#">Legislation</a>
+<a class="text-stone-600 dark:text-stone-400 hover:text-orange-600" href="#">Committees</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative flex items-center flex-1 max-w-md">
+<span class="material-symbols-outlined absolute left-3 text-stone-500">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full text-sm focus:ring-2 focus:ring-primary-container transition-all outline-none text-on-surface" placeholder="Search members, legislation..." type="text"/>
+</div>
+</div>
+</div>
+</nav>
+<main class="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+<!-- Hero Header -->
+<header class="mb-16">
+<div class="inline-flex items-center px-4 py-1.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant text-xs font-bold mb-6 tracking-wide">
+                DEMOCRACY IS YOUR VOICE HEARD
+            </div>
+<h1 class="font-headline font-extrabold text-5xl md:text-7xl text-on-surface tracking-tighter leading-[1.1] mb-6">
+                최근 포착된 <span class="text-primary italic">상반 발언</span> 후보
+            </h1>
+<p class="font-body text-xl text-on-surface-variant max-w-2xl leading-relaxed">
+                투표 전에, 지금 비교해보세요. AssemblyVoice가 인공지능으로 공직자의 발언 일관성을 투명하게 분석합니다.
+            </p>
+</header>
+<!-- Hot Topics Chips -->
+<section class="mb-12 flex flex-wrap gap-3 items-center">
+<span class="text-sm font-semibold text-on-surface-variant mr-2">Hot Topics:</span>
+<button class="px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium shadow-sm hover:bg-primary-container hover:text-white transition-all">부동산</button>
+<button class="px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium shadow-sm hover:bg-primary-container hover:text-white transition-all">교육</button>
+<button class="px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium shadow-sm hover:bg-primary-container hover:text-white transition-all">노동</button>
+<button class="px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium shadow-sm hover:bg-primary-container hover:text-white transition-all">의료</button>
+<button class="px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium shadow-sm hover:bg-primary-container hover:text-white transition-all">안보</button>
+<button class="px-6 py-2.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-medium shadow-sm hover:bg-primary-container hover:text-white transition-all">복지</button>
+</section>
+<!-- Main Hero Card -->
+<section class="mb-20">
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_12px_40px_rgba(155,69,0,0.06)] flex flex-col lg:flex-row min-h-[500px]">
+<!-- Left: Member Photo -->
+<div class="lg:w-2/5 relative min-h-[400px]">
+<img alt="Assembly Member" class="absolute inset-0 w-full h-full object-cover" data-alt="Professional portrait of a male assembly member in a sharp suit against a neutral background, authoritative and trustworthy look" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKhWS-cELiEd3l5ow7sK2mt7Hjg9xLAAGZ5H05Uuz31YxBnTl6pLuGpvbe54IP8FMJsDg4xu5tumUBcubucdaZcfuaU_s1t9rqkhAJYoo25_Y4kBDqheeFcw6KXenPcXo6jCsEGo9pOjkIYeK2gCPr_DTzqw5WAIMHV4wbpJLKI8w0-8B-b20GjJwSD0wwoOJpCdymxNFJWCaNXmxSe65JWPY7M7qDWS_PE9sdjZbs0JssN4Y20o9af3sQLX00LyORgJNq-z3XRiRA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/40 to-transparent"></div>
+<div class="absolute bottom-8 left-8 text-white">
+<h2 class="text-4xl font-bold font-headline mb-1">김태호 의원</h2>
+<p class="text-lg opacity-90">대한민국당 | 서울 종로구</p>
+</div>
+</div>
+<!-- Right: Analysis Content -->
+<div class="lg:w-3/5 p-10 flex flex-col justify-between">
+<div>
+<div class="flex gap-2 mb-8">
+<span class="px-3 py-1 rounded-full bg-tertiary-container text-on-tertiary-container text-[10px] font-bold uppercase tracking-widest">최근 업데이트</span>
+<span class="px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-widest">자동 분석</span>
+<span class="px-3 py-1 rounded-full bg-primary-fixed text-on-primary-fixed-variant text-[10px] font-bold uppercase tracking-widest">부동산</span>
+</div>
+<!-- Timeline Comparison -->
+<div class="relative py-8 px-6 bg-surface-container-low rounded-lg mb-8 border border-outline-variant/15">
+<div class="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+<div class="flex-1 text-center md:text-left">
+<div class="text-xs text-stone-500 font-bold mb-2">2024.02.03 발췌</div>
+<p class="text-lg font-semibold text-on-surface leading-snug">"이런 거 아니에요"</p>
+</div>
+<div class="flex-shrink-0">
+<span class="material-symbols-outlined text-primary text-4xl">trending_flat</span>
+</div>
+<div class="flex-1 text-center md:text-right">
+<div class="text-xs text-stone-500 font-bold mb-2">2026.02.03 발췌</div>
+<p class="text-lg font-semibold text-on-surface leading-snug">"이런 거예요"</p>
+</div>
+</div>
+</div>
+<p class="text-on-surface-variant leading-relaxed italic mb-8">
+                            "주택 공급 안정화를 위해 규제 완화가 필수적이라던 2년 전 발언과 달리, 최근 토론회에서는 투기 방지를 위한 강력한 규제 유지를 주장하고 있습니다."
+                        </p>
+</div>
+<div class="flex flex-wrap gap-4 mt-auto">
+<button class="px-8 py-3.5 rounded-full signature-gradient text-white font-bold text-sm shadow-lg hover:shadow-primary/20 transition-all scale-100 active:scale-95">원문 보기</button>
+<button class="px-8 py-3.5 rounded-full bg-surface-container-high text-on-secondary-container font-bold text-sm hover:bg-surface-container-highest transition-all">이 사람 더 보기</button>
+<button class="px-8 py-3.5 rounded-full bg-surface-container-high text-on-secondary-container font-bold text-sm hover:bg-surface-container-highest transition-all">이 주제 더 보기</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent More Section (Bento Grid) -->
+<section class="mb-24">
+<h3 class="font-headline font-bold text-2xl mb-8 px-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">analytics</span>
+                추가 분석 사례
+            </h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Case 1 -->
+<div class="bg-surface-container-low p-8 rounded-lg hover:bg-surface-container-high transition-all cursor-pointer group">
+<div class="flex items-center gap-4 mb-6">
+<img alt="Politician 1" class="w-14 h-14 rounded-full object-cover" data-alt="Portrait of a male politician with glasses, looking professional" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-juzB_s8Ge3zW2wqS1lYbK2-cB3yCyKVNf32CeMo2tNOvZTqVos6JZF732O6ybmG0cbb72NCGOEDu4iUgY6LIO4ha_ls6OLXkFEIrerbO7cZvnF0e6EUZZudxjE4oWmJHF2EOWF-cvFssQESuvhW57u0ja_rhYlSaDnd4qS1V9dCufuxBTj8bBXH91il3GnrP4_8cPXnF8GjMRltwUD5WxuRYfjfnypOwi5ZwbR-qMHnshnr5llU5qaYRGWcZrSj5kgyDRjaGiVXp"/>
+<div>
+<h4 class="font-bold">박민수 의원</h4>
+<p class="text-xs text-stone-500">교육정책 | 2023-2024</p>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed group-hover:text-on-surface">입시 제도 개편에 대해 '현행 유지'에서 '전면 개편'으로 입장을 선회했습니다.</p>
+</div>
+<!-- Case 2 -->
+<div class="bg-surface-container-low p-8 rounded-lg hover:bg-surface-container-high transition-all cursor-pointer group">
+<div class="flex items-center gap-4 mb-6">
+<img alt="Politician 2" class="w-14 h-14 rounded-full object-cover" data-alt="Portrait of a female politician with a determined look" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4zTNrXXWYsWdO-2qLmmi8negyFGnm6QjZvKPu96Ii2M7w0vJbVU2U_0N64CAe7EUEEnwe3tlQOLrr_o_RmF5uPSwRHg30uGStz4nFlAt0q1VJX7hnz6kHXIwW53G41rly7iy-cv10c0XLSKKBh16CvirCWbDEW8z04Eig3cmt5_CoqiXqrlnOa9obmYyU-CMlgY5iSsfbsrtC5KnpiP9yZy039yJdkMMVYkfD8qiCNHujUZi3Nlm2NGY0EeLlUH3DnSAlO099irS0"/>
+<div>
+<h4 class="font-bold">이서연 의원</h4>
+<p class="text-xs text-stone-500">노동개혁 | 2024-2025</p>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed group-hover:text-on-surface">근로시간 유연화에 대해 기업 입장 대변에서 노동자 권익 보호로 발언 톤이 변화했습니다.</p>
+</div>
+<!-- Case 3 -->
+<div class="bg-surface-container-low p-8 rounded-lg hover:bg-surface-container-high transition-all cursor-pointer group">
+<div class="flex items-center gap-4 mb-6">
+<img alt="Politician 3" class="w-14 h-14 rounded-full object-cover" data-alt="Portrait of an older male politician, dignified appearance" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA73lcUCVhLDKwRa1QnJHVR1mtr2Z2O6bfOE3lW1eO0OHQ7DB9REHBVoBDxjx9XN4OU0ubYgtuyDdEtym2hpGu-fOH5yQ5uqMbY-03mti3XayVcgsgHO8uv8zZamrWOn3BW1iWlH89NjUtnY56ZXGlwMPtgKa6G65Hllr26vVDf5Lkg-aQ_U-z4VN1QlfzQsvDbu9Dp7w-SfkeTV1zUwIiX7gg3SqlkjUUz6-ZTRMEjMtxKW8TpEt97lsJBJqC83MlC7gNBt1yS-WLd"/>
+<div>
+<h4 class="font-bold">최준호 의원</h4>
+<p class="text-xs text-stone-500">에너지 안보 | 2022-2025</p>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed group-hover:text-on-surface">탈원전 기조에서 원전 비중 확대 찬성으로 정책적 일관성이 결여된 모습입니다.</p>
+</div>
+</div>
+</section>
+<!-- Trending People Section -->
+<section class="mb-24">
+<h3 class="font-headline font-bold text-2xl mb-8 px-2">지금 주목받는 인물</h3>
+<div class="flex flex-col gap-4">
+<!-- Trending Row 1 -->
+<div class="flex items-center justify-between p-6 bg-surface-container-lowest rounded-lg hover:shadow-sm transition-all">
+<div class="flex items-center gap-6">
+<span class="font-headline font-black text-3xl text-primary-container/30 w-8">01</span>
+<img alt="Trending 1" class="w-12 h-12 rounded-full object-cover" data-alt="Headshot of a male politician" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBUq88hJZ-6QJZp3zgkIgajwrc2aal241PZ2cpxNGAFgkv-kD_wXQgWUvahXCGQKcEbgVXEICXCDScUk_LmVSGrJhv_xWq_drf2xQ2RZWl2TwjEqkuH_aGKQRwPBstvHjV_1YSNFdMQIJs6EOSDB_a9i-8LX0dhwrGF0dz7eLVxvE3keE8RbxQ6uZKOC5taA60Lrl5DBzciQ_PIEXUU8tz7eX8izVtoiSKPpSAGVHmM1pJ2WvgjlkJb5rcaSp8f3gFT6dL1-NruNpq"/>
+<div>
+<h4 class="font-bold text-lg">한지훈</h4>
+<p class="text-sm text-stone-500">언급 이슈: 국민연금 개혁, 저출산 대책</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-stone-400">chevron_right</span>
+</div>
+<!-- Trending Row 2 -->
+<div class="flex items-center justify-between p-6 bg-surface-container-lowest rounded-lg hover:shadow-sm transition-all">
+<div class="flex items-center gap-6">
+<span class="font-headline font-black text-3xl text-primary-container/30 w-8">02</span>
+<img alt="Trending 2" class="w-12 h-12 rounded-full object-cover" data-alt="Headshot of a female politician" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8MfZbaOvyEapH1JCM5_-bN0BQjU6kJRdHLjjj4JIpa2sOszIklgMgsxR7bHuMZ42znhiPvTf1apMZXPkY4Pq5rBSWECqEGn7Q0WqKpUdnZoiiIvRD5ZfCrO0BiwbN6vhS9UVJ7hg2QsD9CPnJfYDkvtVd3HqKdgyoPw8XOsIlVJAOd-dXVhLYPh_FMO-i7Dv8irq3-iC9A5OBzwKM1AxzrRS4atd0mrf2ehyBthnc99YWkOkeAuhrIzsNCpNipmixLuCKpLO9xP3a"/>
+<div>
+<h4 class="font-bold text-lg">정소영</h4>
+<p class="text-sm text-stone-500">언급 이슈: 수도권 집중화, 지방 소멸 방지</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-stone-400">chevron_right</span>
+</div>
+<!-- Trending Row 3 -->
+<div class="flex items-center justify-between p-6 bg-surface-container-lowest rounded-lg hover:shadow-sm transition-all">
+<div class="flex items-center gap-6">
+<span class="font-headline font-black text-3xl text-primary-container/30 w-8">03</span>
+<img alt="Trending 3" class="w-12 h-12 rounded-full object-cover" data-alt="Headshot of a middle aged male politician" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlSH1dW1fGaqFKbXvDqtBa7p3g2IP2r0ieZnBalVMssn_-zKrDdsyp1EtmlvCzbVftB80RsP7SFvuCsinDMO2e8mz3e8S0hsfClbnELxOz35hze31hd53CSZ0G6uQJrF3lWgoQY0sbs3SnntPsQXTgRU0JA8tEkMgBDfD_cQRH7Cbi6H6B6ve9MNBiIL2rzuNmqjR-VFA_457DVPj8gUmgvnASDDT7BFXmNf41i1jGq89wjRVoU-akaAIzsCV5KsUhV0bAGK0blSm1"/>
+<div>
+<h4 class="font-bold text-lg">강승우</h4>
+<p class="text-sm text-stone-500">언급 이슈: 반도체 특별법, 신산업 규제</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-stone-400">chevron_right</span>
+</div>
+<!-- Trending Row 4 -->
+<div class="flex items-center justify-between p-6 bg-surface-container-lowest rounded-lg hover:shadow-sm transition-all">
+<div class="flex items-center gap-6">
+<span class="font-headline font-black text-3xl text-primary-container/30 w-8">04</span>
+<img alt="Trending 4" class="w-12 h-12 rounded-full object-cover" data-alt="Headshot of a young female politician" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFgKIFiMkYO5CToyqI2vwt18qCnGqhFgR3XJ-cqJZX4W4vtj4lgmI2p2_z5fjXimztYXedqLE1FVCLG3bG9VrBDtXHC9_-CApBpPufSUVpz2birW5silV2ld3bFu8s5qb15SE0w3Dq5UTOH_6_cO5e4Dn3we8BGYl_1fmMdrsXIixjbYns6-fHAfuqdiEwqz3CCofL6Je_cE3_elFGKA1GYH_i_-uyInRQUxUboPOCffNiGLzh8LF_ynhPT4Jtn44e-lAMLr3R5G7N"/>
+<div>
+<h4 class="font-bold text-lg">유다인</h4>
+<p class="text-sm text-stone-500">언급 이슈: 기후 위기 대응, 탄소중립</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-stone-400">chevron_right</span>
+</div>
+<!-- Trending Row 5 -->
+<div class="flex items-center justify-between p-6 bg-surface-container-lowest rounded-lg hover:shadow-sm transition-all">
+<div class="flex items-center gap-6">
+<span class="font-headline font-black text-3xl text-primary-container/30 w-8">05</span>
+<img alt="Trending 5" class="w-12 h-12 rounded-full object-cover" data-alt="Headshot of a male politician in blue suit" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAC3rx6T08p4Av5a8mS6aU0baPy7JdMYyhmJy5VXr2yCCm34uY-73U7Fr1hCCTvwGrYGG9-Vae_u-F_aUGseUp7c1sfEZPgc2BNfU3kPdMK5-lTdChyYr5XrtS_TuHXNvV6jOHfxrQMIlur0FzcgmLJ9vLm87LZh6D7PSkZtP8eQ0c3-ktQb8G3XDPiADEmX5EJy1Kw7LS0A5B2C99yGDSIt8tHFIXXLdYTLu9KTLkAb8a7cSIlsj4cHaX0Eetdw9qMWii0g_fKp_eP"/>
+<div>
+<h4 class="font-bold text-lg">임성주</h4>
+<p class="text-sm text-stone-500">언급 이슈: 남북 관계, 국방 예산</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-stone-400">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Bottom Notice -->
+<div class="bg-surface-container p-8 rounded-lg flex items-center justify-center gap-4 text-on-surface-variant font-medium">
+<span class="material-symbols-outlined text-primary">info</span>
+<p>자동 분석으로 비교된 발언입니다. 원문 맥락을 함께 확인하세요.</p>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full rounded-t-[3rem] mt-20 bg-[#F8F2EF] dark:bg-stone-950">
+<div class="flex flex-col md:flex-row justify-between items-center py-12 px-12 max-w-7xl mx-auto">
+<div class="mb-8 md:mb-0">
+<div class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-orange-900 dark:text-orange-100 mb-2">AssemblyVoice</div>
+<p class="font-['Be_Vietnam_Pro'] text-sm text-stone-500">© 2024 The Cultivated Hearth. Bridging the gap between citizens and assembly.</p>
+</div>
+<div class="flex gap-8 font-['Be_Vietnam_Pro'] text-sm text-stone-500">
+<a class="hover:text-orange-600 transition-opacity" href="#">Privacy Policy</a>
+<a class="hover:text-orange-600 transition-opacity" href="#">Terms of Service</a>
+<a class="hover:text-orange-600 transition-opacity" href="#">Accessibility</a>
+<a class="hover:text-orange-600 transition-opacity" href="#">Contact Us</a>
+</div>
+</div>
+</footer>
+<!-- FAB (Suppressed on Home per instructions - but kept as potential component example if it were on a task screen) -->
+<!-- <button class="fixed bottom-8 right-8 w-16 h-16 rounded-full signature-gradient text-white shadow-2xl flex items-center justify-center scale-100 active:scale-90 transition-transform">
+        <span class="material-symbols-outlined text-3xl">add</span>
+    </button> -->
+</body></html>

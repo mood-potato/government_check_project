@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AssemblyVoice - Search Results</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be_Vietnam_Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#1d1b19",
+                        "on-primary-fixed-variant": "#763300",
+                        "on-primary-container": "#6a2d00",
+                        "surface-dim": "#ded9d5",
+                        "background": "#fef8f4",
+                        "tertiary-container": "#00b9e2",
+                        "on-error": "#ffffff",
+                        "inverse-on-surface": "#f5f0ec",
+                        "outline-variant": "#ddc1b3",
+                        "on-secondary-fixed-variant": "#693b1f",
+                        "on-secondary-fixed": "#331200",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#ffdbc9",
+                        "primary-container": "#ff8c42",
+                        "on-surface-variant": "#564338",
+                        "secondary-fixed": "#ffdbc9",
+                        "primary": "#9b4500",
+                        "tertiary-fixed": "#b7eaff",
+                        "secondary": "#845234",
+                        "secondary-fixed-dim": "#fab893",
+                        "surface-container": "#f3ede9",
+                        "outline": "#897266",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#00677f",
+                        "surface-container-highest": "#e7e1de",
+                        "on-tertiary-fixed-variant": "#004e60",
+                        "on-secondary-container": "#79482b",
+                        "tertiary-fixed-dim": "#4cd6ff",
+                        "on-background": "#1d1b19",
+                        "surface-variant": "#e7e1de",
+                        "surface-bright": "#fef8f4",
+                        "on-tertiary-fixed": "#001f28",
+                        "inverse-surface": "#32302e",
+                        "on-primary-fixed": "#331200",
+                        "on-tertiary-container": "#004556",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#ede7e3",
+                        "primary-fixed-dim": "#ffb68d",
+                        "surface-tint": "#9b4500",
+                        "error": "#ba1a1a",
+                        "surface": "#fef8f4",
+                        "secondary-container": "#fdbb96",
+                        "inverse-primary": "#ffb68d",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f8f2ef",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Be Vietnam Pro"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #9b4500 0%, #ff8c42 100%);
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #fef8f4;
+            color: #1d1b19;
+        }
+        h1, h2, h3, .brand-font {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#FFF9F5]/70 backdrop-blur-2xl shadow-[0_12px_40px_rgba(155,69,0,0.06)]">
+<div class="flex justify-between items-center max-w-7xl mx-auto px-8 h-20">
+<div class="text-2xl font-bold tracking-tighter text-orange-900 brand-font">AssemblyVoice</div>
+<div class="hidden md:flex items-center gap-8 flex-shrink-0">
+<a class="font-['Plus_Jakarta_Sans'] font-semibold text-sm tracking-tight text-stone-600 hover:text-orange-600 transition-all duration-300" href="#">Home</a>
+<a class="font-['Plus_Jakarta_Sans'] font-semibold text-sm tracking-tight text-stone-600 hover:text-orange-600 transition-all duration-300" href="#">Members</a>
+<a class="font-['Plus_Jakarta_Sans'] font-semibold text-sm tracking-tight text-orange-700 border-b-2 border-orange-500 pb-1" href="#">Legislation</a>
+<a class="font-['Plus_Jakarta_Sans'] font-semibold text-sm tracking-tight text-stone-600 hover:text-orange-600 transition-all duration-300" href="#">Committees</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative flex-1 max-w-md mx-4">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" data-icon="search">search</span>
+<input class="w-full pl-12 pr-4 py-2.5 bg-stone-100 border-none rounded-full text-sm focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all duration-300 placeholder:text-stone-400" placeholder="Search members, legislation, or committees..." type="text"/>
+</div>
+</div>
+</div>
+</nav>
+<main class="pt-32 pb-20 max-w-7xl mx-auto px-8">
+<!-- Search Header Section -->
+<header class="mb-12">
+<div class="bg-surface-container-low rounded-xl p-8 mb-8 relative overflow-hidden">
+<div class="relative z-10">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="flex-1">
+<h1 class="text-display-md text-4xl font-extrabold tracking-tight mb-4 text-on-surface">Search Results for '<span class="text-primary">부동산</span>'</h1>
+<p class="text-on-surface-variant max-w-2xl text-lg">Detailed analysis of legislative activity and representative stances regarding real estate policy and housing markets.</p>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container-lowest px-6 py-3 rounded-full shadow-sm flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="groups">groups</span>
+<span class="font-semibold text-on-surface">12 Members Found</span>
+</div>
+<div class="bg-surface-container-lowest px-6 py-3 rounded-full shadow-sm flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary" data-icon="campaign">campaign</span>
+<span class="font-semibold text-on-surface">84 Speeches Found</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Decorative element -->
+<div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+</div>
+</header>
+<div class="flex flex-col lg:flex-row gap-12">
+<!-- Main Content Area -->
+<div class="flex-1 space-y-16">
+<!-- Members Section (Asymmetric Layout) -->
+<section>
+<div class="flex items-center justify-between mb-8">
+<h2 class="text-2xl font-bold text-on-surface flex items-center gap-3">
+<span class="w-2 h-8 signature-gradient rounded-full"></span>
+                            Key Representatives
+                        </h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Member Card 1 -->
+<div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_12px_40px_rgba(155,69,0,0.06)] hover:translate-y-[-4px] transition-transform duration-300">
+<div class="flex gap-6 mb-6">
+<img alt="Member portrait" class="w-24 h-24 rounded-lg object-cover" data-alt="Professional headshot of an executive man in a dark suit with a warm, natural background and soft sunlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCM2QbOuu28TbWYT9Hyk7eSFF7TqCkGqoC7gSUf4DqU7YPNaU9wCX0FnEedLibQNmGjpUbyskq7fKFN0QJ3Z8AC2I5tvBw_2bVsOO_nThyHxKhe1ZJwTQRGQEAIi8th7PgdC18bH-L5EvWjBkuOftsNWFbzfDJvHuALRFk4-PcJ-DjucELeTtsiOFb3-1qPUftjju9VkV_STAYiQinqNxuN07t9kr9K3uvEK64QfgABZD6hIN1wdu3HCI8oWtKZFuEcZM2Os5-K4kIf"/>
+<div>
+<h3 class="text-xl font-bold text-on-surface mb-1">Kim Min-jun</h3>
+<p class="text-sm text-on-surface-variant font-medium mb-3">Land &amp; Infrastructure Committee</p>
+<span class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant text-xs font-bold rounded-full">Reform Focus</span>
+</div>
+</div>
+<p class="text-on-surface-variant leading-relaxed text-sm mb-6 italic">
+                                "Stabilizing the housing market requires long-term supply predictability rather than short-term tax regulations."
+                            </p>
+<div class="pt-6 border-t border-outline-variant/15 flex justify-between items-center">
+<span class="text-xs font-semibold text-primary">View Voting Record</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+<!-- Member Card 2 -->
+<div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_12px_40px_rgba(155,69,0,0.06)] hover:translate-y-[-4px] transition-transform duration-300">
+<div class="flex gap-6 mb-6">
+<img alt="Member portrait" class="w-24 h-24 rounded-lg object-cover" data-alt="Confident female leader portrait with professional lighting, warm tones, and blurred office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQGxNTJuube2gTvuWbrtk7II6OKSqstUpckBkJOJbY9A6gIaxs4SdgfeyJY07c-fpB1K4DbK0d6FWiNagawf6u0jyYzbQD-Z6cII9ih8UmCbJ3OC5u6EMI1OlEvWlYAD4Ywb0zTxjJyJrI3GY3mcH9banM3_DMuoIZVCzIz5GQpGFZS-7gFgJMO6N2v2GZoxEykSk7r2SKNsKNsBY7-yFyzSWbiL0_LIl4fcWmsvl646eEJBUPERtY5NShGeoxLsJldQmZJLsyUBiJ"/>
+<div>
+<h3 class="text-xl font-bold text-on-surface mb-1">Lee Seo-yeon</h3>
+<p class="text-sm text-on-surface-variant font-medium mb-3">Finance Committee</p>
+<span class="px-3 py-1 bg-primary-fixed text-on-primary-fixed-variant text-xs font-bold rounded-full">Tax Specialist</span>
+</div>
+</div>
+<p class="text-on-surface-variant leading-relaxed text-sm mb-6 italic">
+                                "We must balance asset taxation with the rights of single-home owners to ensure social equity."
+                            </p>
+<div class="pt-6 border-t border-outline-variant/15 flex justify-between items-center">
+<span class="text-xs font-semibold text-primary">View Voting Record</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Speech Comparison Section -->
+<section>
+<div class="flex items-center justify-between mb-8">
+<h2 class="text-2xl font-bold text-on-surface flex items-center gap-3">
+<span class="w-2 h-8 signature-gradient rounded-full"></span>
+                            Temporal Discourse Comparison
+                        </h2>
+</div>
+<!-- Comparison Pair -->
+<div class="flex flex-col md:flex-row items-stretch gap-6 relative">
+<!-- Connecting Arrow (Visible only on desktop) -->
+<div class="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-surface-container-highest border-4 border-background items-center justify-center text-primary shadow-lg">
+<span class="material-symbols-outlined font-bold" data-icon="compare_arrows">compare_arrows</span>
+</div>
+<!-- Card Left -->
+<div class="flex-1 bg-surface-container-low p-8 rounded-lg border-l-4 border-primary/20">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="text-xs font-bold uppercase tracking-widest text-primary mb-2 block">July 2023</span>
+<h4 class="font-bold text-on-surface">General Assembly</h4>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="history">history</span>
+</div>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-4">
+                                "The surge in real estate prices is a global phenomenon. We need aggressive intervention to protect first-time buyers."
+                            </p>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-stone-300"></div>
+<span class="text-xs font-medium text-on-surface-variant">Rep. Kim Min-jun</span>
+</div>
+</div>
+<!-- Card Right -->
+<div class="flex-1 bg-surface-container-low p-8 rounded-lg border-r-4 border-tertiary/20">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="text-xs font-bold uppercase tracking-widest text-tertiary mb-2 block">Feb 2024</span>
+<h4 class="font-bold text-on-surface">Committee Hearing</h4>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="event_note">event_note</span>
+</div>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-4">
+                                "Regulations have reached their limit. Market stability must now be driven by private sector supply incentives."
+                            </p>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-stone-300"></div>
+<span class="text-xs font-medium text-on-surface-variant">Rep. Kim Min-jun</span>
+</div>
+</div>
+</div>
+<p class="mt-6 text-center text-sm text-on-surface-variant italic font-medium">Shift in focus detected from "Regulation" to "Market Incentive".</p>
+</section>
+<!-- More Speeches Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-lg border border-outline-variant/10">
+<div class="flex gap-4 items-start">
+<div class="p-3 rounded-lg bg-secondary-container/30 text-secondary">
+<span class="material-symbols-outlined" data-icon="record_voice_over">record_voice_over</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface mb-2">Housing Supply Act Debates</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Discussing the impact of '부동산' supply on metropolitan stability.</p>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg border border-outline-variant/10">
+<div class="flex gap-4 items-start">
+<div class="p-3 rounded-lg bg-tertiary-container/10 text-tertiary">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface mb-2">Tax Revenue Analysis</h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">Analyzing how '부동산' tax changes affect local government budgets.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar Filters (The Refine Rail) -->
+<aside class="w-full lg:w-80 space-y-8">
+<div class="bg-surface-container rounded-lg p-8 sticky top-28">
+<h3 class="text-xl font-bold text-on-surface mb-8 flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+                        Refine Search
+                    </h3>
+<!-- Filter Group: Time -->
+<div class="mb-10">
+<label class="block text-xs font-bold text-primary uppercase tracking-widest mb-4">Time Horizon</label>
+<div class="space-y-3">
+<button class="w-full text-left px-4 py-3 rounded-lg bg-surface-container-lowest text-sm font-semibold text-on-surface flex justify-between items-center">
+                                Past 6 Months
+                                <span class="material-symbols-outlined text-xs" data-icon="expand_more">expand_more</span>
+</button>
+<div class="h-1 bg-outline-variant/20 rounded-full relative overflow-hidden">
+<div class="absolute left-0 top-0 h-full w-2/3 signature-gradient"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant font-medium text-right">Jul 2023 - Jan 2024</p>
+</div>
+</div>
+<!-- Filter Group: Committees -->
+<div class="mb-10">
+<label class="block text-xs font-bold text-primary uppercase tracking-widest mb-4">Committees</label>
+<div class="space-y-2">
+<label class="flex items-center gap-3 p-2 hover:bg-surface-container-high rounded-lg cursor-pointer transition-colors">
+<input checked="" class="w-5 h-5 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Land &amp; Infrastructure</span>
+</label>
+<label class="flex items-center gap-3 p-2 hover:bg-surface-container-high rounded-lg cursor-pointer transition-colors">
+<input checked="" class="w-5 h-5 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Finance</span>
+</label>
+<label class="flex items-center gap-3 p-2 hover:bg-surface-container-high rounded-lg cursor-pointer transition-colors">
+<input class="w-5 h-5 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm font-medium text-on-surface">Judiciary</span>
+</label>
+</div>
+</div>
+<!-- Filter Group: Hot Issues -->
+<div>
+<label class="block text-xs font-bold text-primary uppercase tracking-widest mb-4">Related Topics</label>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1.5 bg-surface-container-lowest border border-outline-variant/30 rounded-full text-xs font-medium hover:bg-primary hover:text-white transition-colors cursor-pointer">Taxation</span>
+<span class="px-3 py-1.5 bg-surface-container-lowest border border-outline-variant/30 rounded-full text-xs font-medium hover:bg-primary hover:text-white transition-colors cursor-pointer">Supply</span>
+<span class="px-3 py-1.5 bg-surface-container-lowest border border-outline-variant/30 rounded-full text-xs font-medium hover:bg-primary hover:text-white transition-colors cursor-pointer">Stability</span>
+<span class="px-3 py-1.5 bg-surface-container-lowest border border-outline-variant/30 rounded-full text-xs font-medium hover:bg-primary hover:text-white transition-colors cursor-pointer">Rent Control</span>
+<span class="px-3 py-1.5 bg-surface-container-lowest border border-outline-variant/30 rounded-full text-xs font-medium hover:bg-primary hover:text-white transition-colors cursor-pointer">Asset Disclosure</span>
+</div>
+</div>
+<button class="w-full mt-10 py-4 signature-gradient text-white rounded-full font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform active:scale-95">
+                        Apply Filters
+                    </button>
+</div>
+</aside>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full rounded-t-[3rem] mt-20 bg-[#F8F2EF]">
+<div class="flex flex-col md:flex-row justify-between items-center py-12 px-12 max-w-7xl mx-auto">
+<div class="mb-8 md:mb-0">
+<div class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-orange-900 mb-2">AssemblyVoice</div>
+<p class="font-['Be_Vietnam_Pro'] text-sm text-stone-500 max-w-xs">© 2024 The Cultivated Hearth. Bridging the gap between citizens and assembly.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="font-['Be_Vietnam_Pro'] text-sm text-stone-500 hover:text-orange-600 transition-opacity" href="#">Privacy Policy</a>
+<a class="font-['Be_Vietnam_Pro'] text-sm text-stone-500 hover:text-orange-600 transition-opacity" href="#">Terms of Service</a>
+<a class="font-['Be_Vietnam_Pro'] text-sm text-stone-500 hover:text-orange-600 transition-opacity" href="#">Accessibility</a>
+<a class="font-['Be_Vietnam_Pro'] text-sm text-stone-500 hover:text-orange-600 transition-opacity" href="#">Contact Us</a>
+</div>
+</div>
+</footer>
+</body></html>
