@@ -5,17 +5,15 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
-from pipelines.utils.config import OPEN_GOVERMENT_API_KEY
-from pipelines.utils.db_connections import get_postgres_connection
-from pipelines.utils.incremental_helpers import (
+from pipelines.utils.common import OPEN_GOVERMENT_API_KEY
+from pipelines.utils.db import get_postgres_connection
+from pipelines.utils.openapi import (
     filter_new_dates,
     get_date_range_filter,
     get_existing_pdf_dates,
-)
-from pipelines.utils.request_utils import request_paginated_data
-from pipelines.utils.url_constants import (
     MAIN_CONGRESS_SCHEDULE_URL,
     MAIN_CONGRESS_SPEECH_PDF_URL,
+    request_paginated_data,
 )
 
 

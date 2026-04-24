@@ -4,7 +4,7 @@ from pipelines.bill_collection_pipeline import (
     BillUrlLoader,
     BillUrlTransformer,
 )
-from pipelines.utils.request_utils import request_paginated_data
+from pipelines.utils.openapi import request_paginated_data
 
 
 def test_bill_info_transformer_normalizes_openapi_rows():
@@ -148,7 +148,7 @@ def test_request_paginated_data_wraps_single_row_objects(monkeypatch):
                 ]
             }
 
-    monkeypatch.setattr("pipelines.utils.request_utils.requests.get", lambda **kwargs: Response())
+    monkeypatch.setattr("pipelines.utils.openapi.requests.get", lambda **kwargs: Response())
 
     rows = request_paginated_data(
         "https://open.assembly.go.kr/portal/openapi/VCONFBILLCONFLIST",

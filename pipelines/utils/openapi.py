@@ -1,7 +1,16 @@
-import requests
-from loguru import logger
 import json
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
+from typing import List, Set
+
+import requests
+from loguru import logger
+
+MAIN_CONGRESS_SCHEDULE_URL = "https://open.assembly.go.kr/portal/openapi/nekcaiymatialqlxr"
+MAIN_CONGRESS_SPEECH_PDF_URL = "https://open.assembly.go.kr/portal/openapi/nzbyfwhwaoanttzje"
+CONGRESS_BILL_LIST_URL = "https://open.assembly.go.kr/portal/openapi/VCONFBILLLIST"
+CONGRESS_BILL_CONF_LIST_URL = "https://open.assembly.go.kr/portal/openapi/VCONFBILLCONFLIST"
+
 
 def request_paginated_data(
     url, base_params, key_name, date_key=None, date_value=None, page_size=100, max_pages=100
@@ -24,14 +33,17 @@ def request_paginated_data(
     all_data = []
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = executor.map(
-            lambda idx: _fetch_single_page(url, base_params, key_name, date_key, date_value, page_size, idx),
-            range(1, max_pages + 1)
+            lambda idx: _fetch_single_page(
+                url, base_params, key_name, date_key, date_value, page_size, idx
+            ),
+            range(1, max_pages + 1),
         )
         for rows in futures:
             if not rows:
                 break
             all_data.extend(rows)
     return all_data
+
 
 def _fetch_single_page(url, base_params, key_name, date_key, date_value, page_size, pIndex):
     params = base_params.copy()
@@ -63,3 +75,33 @@ def _fetch_single_page(url, base_params, key_name, date_key, date_value, page_si
     except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError, IndexError) as e:
         logger.error(f"❌ 페이지 {pIndex} 처리 실패: {e}")
         return []
+
+
+def get_existing_pdf_dates(connection) -> Set[str]:
+    """DB에 이미 저장된 PDF URL의 날짜 목록 조회"""
+    query = "SELECT DISTINCT date FROM pdf_url"
+    with connection.cursor() as cur:
+        cur.execute(query)
+        rows = cur.fetchall()
+        return {row[0].strftime("%Y-%m-%d") if hasattr(row[0], "strftime") else str(row[0]) for row in rows}
+
+
+def get_existing_pdf_urls(connection) -> Set[str]:
+    """DB에 이미 저장된 PDF URL 목록 조회"""
+    query = "SELECT pdf_url FROM pdf_url WHERE pdf_url IS NOT NULL"
+    with connection.cursor() as cur:
+        cur.execute(query)
+        return {row[0] for row in cur.fetchall()}
+
+
+def filter_new_dates(all_dates: List[str], existing_dates: Set[str]) -> List[str]:
+    """새로운 날짜만 필터링"""
+    new_dates = [d for d in all_dates if d not in existing_dates]
+    logger.info(f"전체 {len(all_dates)}개 중 {len(new_dates)}개 신규 날짜 발견")
+    return new_dates
+
+
+def get_date_range_filter(days_back: int = 30) -> str:
+    """최근 N일 이내 날짜 필터 반환"""
+    cutoff_date = datetime.now() - timedelta(days=days_back)
+    return cutoff_date.strftime("%Y-%m-%d")

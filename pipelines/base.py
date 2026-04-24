@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Union
 
 from loguru import logger
 
-from pipelines.utils.db_helpers import execute_query
+from pipelines.utils.db import execute_query
 
 
 class BaseExtractor(ABC):

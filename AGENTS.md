@@ -1,4 +1,4 @@
-# AGENT.md
+# AGENTS.md
 
 ## Product Direction
 
@@ -48,3 +48,15 @@
 - 공통 추상 클래스는 `pipelines/base.py` 한 파일에 둔다.
 - extractor/transformer/loader 폴더 분리는 재사용이나 복잡도가 실제로 커졌을 때만 한다.
 - 파이프라인 함수와 클래스 docstring은 Google 스타일을 유지하되 설명은 한국어로 작성한다.
+
+## Python Style Guide
+
+- Python 코드는 기본적으로 Google Python Style Guide를 따른다.
+- import는 전체 패키지 경로가 드러나게 작성한다. 같은 패키지 안에서도 상대 import보다 `from pipelines...`처럼 명확한 경로를 우선한다.
+- 모듈과 패키지는 실제 변경 이유가 같은 코드끼리만 묶는다. `utils`를 잘게 쪼개기보다 `common`, `db`, `openapi`, `speech`처럼 책임이 분명한 단위로 유지한다.
+- 함수, 변수, 파일명은 `snake_case`, 클래스와 예외는 `CapWords`를 사용한다. 상수는 `UPPER_SNAKE_CASE`로 작성한다.
+- 예외 클래스 이름은 `Error`로 끝내고, 무분별한 `except Exception`은 피한다. 격리 지점에서 로깅 후 삼키거나 다시 raise할 때만 넓게 잡는다.
+- mutable global state는 피한다. 모듈 레벨에는 상수와 설정값만 두고, 연결 객체나 클라이언트는 함수에서 생성하거나 주입한다.
+- 복잡한 list/dict/set comprehension은 피하고, 조건이나 반복이 여러 겹이면 명시적인 loop로 읽기 쉽게 작성한다.
+- public 함수와 클래스에는 Google 스타일 docstring을 쓴다. 설명은 한국어로 작성하고, 인자/반환값/예외가 의미 있는 경우 `Args`, `Returns`, `Raises`를 포함한다.
+- formatting 논쟁은 도구에 맡긴다. 수동 스타일 변경만으로 대량 diff를 만들지 않는다.

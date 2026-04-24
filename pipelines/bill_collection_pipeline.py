@@ -6,12 +6,12 @@ from typing import Dict, Iterable, List, Optional, Tuple
 from loguru import logger
 
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
-from pipelines.utils.config import OPEN_GOVERMENT_API_KEY
-from pipelines.utils.db_connections import get_postgres_connection
-from pipelines.utils.request_utils import request_paginated_data
-from pipelines.utils.url_constants import (
+from pipelines.utils.common import OPEN_GOVERMENT_API_KEY
+from pipelines.utils.db import get_postgres_connection
+from pipelines.utils.openapi import (
     CONGRESS_BILL_CONF_LIST_URL,
     CONGRESS_BILL_LIST_URL,
+    request_paginated_data,
 )
 
 
@@ -515,3 +515,7 @@ class BillCollectionPipeline(BasePipeline):
             "bill_info": bill_info_count,
             "bill_url": bill_url_count,
         }
+
+if __name__ == "__main__":
+    pipeline = BillCollectionPipeline()
+    

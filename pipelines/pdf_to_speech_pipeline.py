@@ -9,8 +9,7 @@ import pdfplumber
 from loguru import logger
 
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
-from pipelines.utils.db_connections import get_postgres_connection
-from pipelines.utils.db_helpers import update_get_pdf_status
+from pipelines.utils.db import get_postgres_connection, update_get_pdf_status
 
 
 NON_SPEECH_KEYWORDS = [
@@ -157,7 +156,7 @@ class PDFToSpeechTransformer(BaseTransformer):
 
         if enable_summary:
             try:
-                from pipelines.utils.summarizer import SpeechSummarizer
+                from pipelines.utils.speech import SpeechSummarizer
                 self.summarizer = SpeechSummarizer()
                 if self.summarizer.is_available():
                     logger.info("요약 기능이 활성화되었습니다.")

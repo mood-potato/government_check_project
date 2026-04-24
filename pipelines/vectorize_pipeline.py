@@ -5,7 +5,7 @@ from loguru import logger
 from sentence_transformers import SentenceTransformer
 
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
-from pipelines.utils.db_connections import get_elasticsearch_client, get_postgres_connection
+from pipelines.utils.db import get_elasticsearch_client, get_postgres_connection
 
 
 class SpeechVectorExtractor(BaseExtractor):
