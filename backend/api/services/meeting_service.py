@@ -50,7 +50,7 @@ class MeetingService:
                 p.confer_number,
                 p.dae_number,
                 p.sub_name,
-                COUNT(DISTINCT s.speaker_id) as speaker_count,
+                COUNT(DISTINCT COALESCE(s.speaker_id::text, s.speaker_name)) as speaker_count,
                 COUNT(s.speech_number) as speech_count
             FROM pdf_url p
             LEFT JOIN speeches s ON p.pdf_url_id::text = s.pdf_url_id
@@ -94,14 +94,15 @@ class MeetingService:
         query = """
             SELECT
                 s.speech_number,
-                sp.name as speaker,
+                COALESCE(sp.name, s.speaker_name) as speaker,
+                s.speaker_title,
                 s.speech as text,
                 s.summary,
                 s.date,
                 s.title,
                 s.class_name
             FROM speeches s
-            JOIN speakers sp ON s.speaker_id = sp.id
+            LEFT JOIN speakers sp ON s.speaker_id = sp.id
             WHERE s.pdf_url_id = %s
             ORDER BY s.speech_number
         """

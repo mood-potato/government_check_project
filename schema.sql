@@ -45,15 +45,27 @@ CREATE TABLE pdf_url (
 CREATE TABLE speeches (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     pdf_url_id      TEXT        NOT NULL,              -- 관련 PDF ID
-    speaker_id      UUID        NOT NULL REFERENCES speakers (id),
+    speaker_id      UUID        REFERENCES speakers (id),
+    speaker_name    TEXT        NOT NULL,              -- 국회의원이 아닌 발언자도 원문 이름 보존
+    speaker_title   TEXT,                              -- 의원/장관/위원장 등 회의록상 직책
     speech_number   INT         NOT NULL,              -- 발언 순서 번호
     date            DATE        NOT NULL,              -- 회의 날짜
+    title           TEXT,
     class_name      TEXT        NOT NULL,              -- 회의 분류명
     confer_number   INT         NOT NULL,              -- 회의 회차 번호
     dae_number      INT         NOT NULL,              -- 대수
     speech          TEXT        NOT NULL,              -- 발언 내용
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    summary         TEXT,
+    vectorized      BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT unique_speech UNIQUE (pdf_url_id, speech_number)
 );
+
+CREATE INDEX idx_speeches_pdf_url_id ON speeches (pdf_url_id);
+CREATE INDEX idx_speeches_speaker_id ON speeches (speaker_id);
+CREATE INDEX idx_speeches_speaker_name ON speeches (speaker_name);
+CREATE INDEX idx_speeches_vectorized ON speeches (vectorized);
 
 -- ============================================================
 -- bill_info  (회의별 의안 목록)
@@ -68,7 +80,9 @@ CREATE TABLE bill_info (
     bill_name       TEXT        NOT NULL,              -- 의안명
     bill_order      INT,                               -- 번호 (예: 14, 15…)
     detail_link     TEXT,                              -- 의안 상세 링크
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT idx_bill_info_meeting_bill UNIQUE (meeting_id, bill_id)
 );
 
 -- ============================================================
@@ -84,5 +98,7 @@ CREATE TABLE bill_url (
     meeting_date    DATE        NOT NULL,              -- 회의일자
     download_url    TEXT        NOT NULL,              -- PDF 다운로드 URL
     get_pdf         BOOLEAN     NOT NULL DEFAULT FALSE, -- PDF 수집 여부
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT idx_bill_url_agenda_meeting_download UNIQUE (agenda_id, meeting_id, download_url)
 );
