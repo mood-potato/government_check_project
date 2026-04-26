@@ -31,7 +31,9 @@ def test_pdf_url_transformer_filters_existing_pdf_urls():
         ]
     )
 
-    assert [row["PDF_LINK_URL"] for row in transformed] == ["https://example.com/new.pdf"]
+    assert [row["PDF_LINK_URL"] for row in transformed] == [
+        "https://example.com/new.pdf"
+    ]
 
 
 def test_pdf_url_loader_logs_row_event_for_inserted(monkeypatch):

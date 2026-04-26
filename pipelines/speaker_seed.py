@@ -196,7 +196,9 @@ def write_seed_sql(csv_path: Path, output_path: Path) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate Supabase seed SQL for speakers.")
+    parser = argparse.ArgumentParser(
+        description="Generate Supabase seed SQL for speakers."
+    )
     parser.add_argument("--csv", type=Path, default=DEFAULT_CSV_PATH)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_PATH)
     args = parser.parse_args()

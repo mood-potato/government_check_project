@@ -31,9 +31,9 @@ class SpeechSearchService:
         query_vector = self.vectorizer.encode_query(query)
 
         knn: Dict[str, Any] = {
-            "field":          "embedding",
-            "query_vector":   query_vector,
-            "k":              top_k,
+            "field": "embedding",
+            "query_vector": query_vector,
+            "k": top_k,
             "num_candidates": top_k * 10,
         }
 
@@ -59,12 +59,12 @@ class SpeechSearchService:
                     continue
                 results.append(
                     {
-                        "id":      hit["_id"],
-                        "score":   score,
-                        "text":    hit["_source"].get("text", ""),
+                        "id": hit["_id"],
+                        "score": score,
+                        "text": hit["_source"].get("text", ""),
                         "speaker": hit["_source"].get("speaker", ""),
-                        "date":    hit["_source"].get("date", ""),
-                        "title":   hit["_source"].get("title", ""),
+                        "date": hit["_source"].get("date", ""),
+                        "title": hit["_source"].get("title", ""),
                     }
                 )
 
@@ -75,8 +75,12 @@ class SpeechSearchService:
             logger.error(f"검색 중 오류: {e}")
             return []
 
-    def search_by_speaker(self, speaker_name: str, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
+    def search_by_speaker(
+        self, speaker_name: str, query: str, top_k: int = 10
+    ) -> List[Dict[str, Any]]:
         return self.search(query=query, top_k=top_k, speaker=speaker_name)
 
-    def search_by_date(self, date: str, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
+    def search_by_date(
+        self, date: str, query: str, top_k: int = 10
+    ) -> List[Dict[str, Any]]:
         return self.search(query=query, top_k=top_k, date=date)

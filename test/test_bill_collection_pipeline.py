@@ -4,7 +4,38 @@ from pipelines.bill_collection_pipeline import (
     BillUrlLoader,
     BillUrlTransformer,
 )
+from pipelines.base import BasePipeline
 from pipelines.utils.openapi import request_paginated_data
+
+
+class DummyPipeline(BasePipeline):
+    """테스트용 파이프라인입니다."""
+
+    def run(self):
+        """테스트에서는 실행하지 않습니다."""
+        return None
+
+
+def test_base_loader_logs_with_loader_prefix(monkeypatch):
+    messages = []
+    loader = BillInfoLoader(connection=object())
+
+    monkeypatch.setattr("pipelines.base.logger.info", messages.append)
+
+    loader.log_info("테이블 준비 완료")
+
+    assert messages == ["[Loader] 테이블 준비 완료"]
+
+
+def test_base_pipeline_logs_with_pipeline_prefix(monkeypatch):
+    messages = []
+    pipeline = DummyPipeline(extractor=object(), loader=object())
+
+    monkeypatch.setattr("pipelines.base.logger.info", messages.append)
+
+    pipeline.log_info("실행 시작")
+
+    assert messages == ["[Pipeline] 실행 시작"]
 
 
 def test_bill_info_transformer_normalizes_openapi_rows():
@@ -185,7 +216,9 @@ def test_request_paginated_data_wraps_single_row_objects(monkeypatch):
                 ]
             }
 
-    monkeypatch.setattr("pipelines.utils.openapi.requests.get", lambda **kwargs: Response())
+    monkeypatch.setattr(
+        "pipelines.utils.openapi.requests.get", lambda **kwargs: Response()
+    )
 
     rows = request_paginated_data(
         "https://open.assembly.go.kr/portal/openapi/VCONFBILLCONFLIST",

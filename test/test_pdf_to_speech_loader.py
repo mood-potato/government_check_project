@@ -67,7 +67,9 @@ def test_save_all_data_preserves_non_member_speaker_without_speaker_id():
         ]
     )
 
-    insert_params = [params for params in loader.params if params and params[0] == "PDF1"]
+    insert_params = [
+        params for params in loader.params if params and params[0] == "PDF1"
+    ]
 
     assert insert_params[0][2] == member_id
     assert insert_params[0][3] == "국회의원"

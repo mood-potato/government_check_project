@@ -4,21 +4,26 @@ from backend.api.services.database import Database
 
 
 class MeetingService:
-
     @staticmethod
     def get_stats() -> dict[str, Any]:
         """Get dashboard statistics (4 metrics)"""
-        total_meetings = Database.fetch_one(
-            "SELECT COUNT(DISTINCT title) as count FROM pdf_url WHERE get_pdf = true"
-        )["count"] or 0
+        total_meetings = (
+            Database.fetch_one(
+                "SELECT COUNT(DISTINCT title) as count FROM pdf_url WHERE get_pdf = true"
+            )["count"]
+            or 0
+        )
 
-        total_speeches = Database.fetch_one(
-            "SELECT COUNT(speech_number) as count FROM speeches"
-        )["count"] or 0
+        total_speeches = (
+            Database.fetch_one("SELECT COUNT(speech_number) as count FROM speeches")[
+                "count"
+            ]
+            or 0
+        )
 
-        total_speakers = Database.fetch_one(
-            "SELECT COUNT(*) as count FROM speakers"
-        )["count"] or 0
+        total_speakers = (
+            Database.fetch_one("SELECT COUNT(*) as count FROM speakers")["count"] or 0
+        )
 
         latest = Database.fetch_one(
             "SELECT MAX(date) as latest FROM pdf_url WHERE get_pdf = true"

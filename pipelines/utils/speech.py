@@ -23,7 +23,9 @@ class SpeechSummarizer:
     def __init__(self, model: str = "gpt-4o-mini", min_length: int = 100):
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            logger.warning("OPENAI_API_KEY가 설정되지 않았습니다. 요약 기능이 비활성화됩니다.")
+            logger.warning(
+                "OPENAI_API_KEY가 설정되지 않았습니다. 요약 기능이 비활성화됩니다."
+            )
             self.client = None
         else:
             self.client = OpenAI(api_key=api_key)
@@ -43,7 +45,10 @@ class SpeechSummarizer:
                 model=self.model,
                 messages=[
                     {"role": "system", "content": self.SYSTEM_PROMPT},
-                    {"role": "user", "content": f"다음 발언을 요약하세요:\n\n{text[:4000]}"},
+                    {
+                        "role": "user",
+                        "content": f"다음 발언을 요약하세요:\n\n{text[:4000]}",
+                    },
                 ],
                 max_tokens=500,
                 temperature=0.3,
@@ -55,7 +60,9 @@ class SpeechSummarizer:
             logger.error(f"요약 중 오류 발생: {e}")
             return None
 
-    def summarize_batch(self, texts: List[str], batch_size: int = 5) -> List[Optional[str]]:
+    def summarize_batch(
+        self, texts: List[str], batch_size: int = 5
+    ) -> List[Optional[str]]:
         results = []
         for i, text in enumerate(texts):
             results.append(self.summarize(text))

@@ -47,7 +47,10 @@ def execute_query(
             cursor.execute(query, params)
 
             # SELECT 또는 RETURNING 쿼리인 경우 결과 반환
-            if query.strip().upper().startswith("SELECT") or "RETURNING" in query.upper():
+            if (
+                query.strip().upper().startswith("SELECT")
+                or "RETURNING" in query.upper()
+            ):
                 result = cursor.fetchall()
                 connection.commit()
                 return result

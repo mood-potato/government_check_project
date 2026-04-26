@@ -13,11 +13,27 @@ from pipelines.utils.db import get_postgres_connection, update_get_pdf_status
 
 
 NON_SPEECH_KEYWORDS = [
-    "출석 의원", "개의 시", "산회 선포", "의석 배치",
-    "교섭단체", "의안 심사", "보고서 제출", "요구서",
-    "서면질문서", "청원", "청가", "의원 등록", "의원 사직",
-    "의원 퇴직", "의석 승계", "상임위원", "소위원장",
-    "특별위원", "통지", "집회", "본회의장 의석",
+    "출석 의원",
+    "개의 시",
+    "산회 선포",
+    "의석 배치",
+    "교섭단체",
+    "의안 심사",
+    "보고서 제출",
+    "요구서",
+    "서면질문서",
+    "청원",
+    "청가",
+    "의원 등록",
+    "의원 사직",
+    "의원 퇴직",
+    "의석 승계",
+    "상임위원",
+    "소위원장",
+    "특별위원",
+    "통지",
+    "집회",
+    "본회의장 의석",
 ]
 
 APPENDIX_MARKERS = [
@@ -157,6 +173,7 @@ class PDFToSpeechTransformer(BaseTransformer):
         if enable_summary:
             try:
                 from pipelines.utils.speech import SpeechSummarizer
+
                 self.summarizer = SpeechSummarizer()
                 if self.summarizer.is_available():
                     logger.info("요약 기능이 활성화되었습니다.")
@@ -214,7 +231,7 @@ class PDFToSpeechTransformer(BaseTransformer):
         m = KNOWN_TITLES_PATTERN.match(raw)
         if m:
             title = m.group(1).strip()
-            name = raw[m.end():].strip()
+            name = raw[m.end() :].strip()
             if name:
                 return (title, name)
 

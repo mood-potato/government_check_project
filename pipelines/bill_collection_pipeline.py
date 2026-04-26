@@ -15,7 +15,6 @@ from pipelines.utils.openapi import (
     request_paginated_data,
 )
 
-
 ORDERED_BILL_NAME_PATTERN = re.compile(r"^\s*(\d+)\.\s*(.+)$")
 NUMBER_PATTERN = re.compile(r"(\d+)")
 
@@ -71,8 +70,10 @@ def format_openapi_date(value: Optional[str]) -> Optional[str]:
 
     return datetime.strptime(value, "%Y%m%d").date().isoformat()
 
+
 # ======== BillInfoETL===========
 # BillInfo는 BillUrl을 가져오기 위해 의안 번호를 가져오는 사이트임
+
 
 class BillInfoExtractor(BaseExtractor):
     """국회 Open API에서 회의별 안건 목록을 수집합니다.
@@ -96,7 +97,7 @@ class BillInfoExtractor(BaseExtractor):
         self.page_size = page_size
         self.max_pages = max_pages
 
-    # TODO: 날짜가 없어서 개수를 세서 증분 저장을 하도록 최신 몇개인지 가져오도록 수정해야함 
+    # TODO: 날짜가 없어서 개수를 세서 증분 저장을 하도록 최신 몇개인지 가져오도록 수정해야함
     def extract(self):
         """안건 목록 원본 row를 수집합니다.
 
@@ -112,7 +113,7 @@ class BillInfoExtractor(BaseExtractor):
         if self.assembly_number:
             base_params["ERACO"] = f"제{self.assembly_number}대"
 
-        # NOTE: 반복적으로 데이터를 가져오도록 설정함, 현재 최대 30만건까지 가져옴. 
+        # NOTE: 반복적으로 데이터를 가져오도록 설정함, 현재 최대 30만건까지 가져옴.
         rows = request_paginated_data(
             self.url,
             base_params,
@@ -122,7 +123,8 @@ class BillInfoExtractor(BaseExtractor):
         )
         self.log_info(f"회의별 의안 목록 데이터 로드 완료: 총 {len(rows)}개")
         return rows
-    
+
+
 class BillInfoTransformer(BaseTransformer):
     """안건 목록 API 응답을 bill_info 저장 형식으로 변환합니다."""
 
@@ -155,6 +157,7 @@ class BillInfoTransformer(BaseTransformer):
         self.log_info(f"회의별 의안 목록 데이터 전환 완료: 총 {len(transformed)}개")
 
         return transformed
+
 
 class BillInfoLoader(BaseLoader):
     """정규화된 안건 목록을 bill_info 테이블에 저장합니다.
@@ -191,7 +194,7 @@ class BillInfoLoader(BaseLoader):
         ]
         for query in queries:
             self._execute_query(query)
-        logger.info("회의별 의안 목록 bill_info 테이블 준비 완료")
+        self.log_info("회의별 의안 목록 bill_info 테이블 준비 완료")
 
     def load(self, bill_info_data: Dict):
         """안건 목록 row 하나를 upsert합니다.
@@ -202,6 +205,7 @@ class BillInfoLoader(BaseLoader):
         Returns:
             공통 쿼리 실행기가 반환한 결과입니다.
         """
+        # TODO: Loader의 update로 인해 문제가 생기는 경우가 있는 지 확인해야 한다.
         query = """
             INSERT INTO bill_info (
                 meeting_id,
@@ -269,26 +273,28 @@ class BillInfoLoader(BaseLoader):
             self.load(row)
             count += 1
         return count
-    
-    
+
+
 class BillInfoPipeline(BasePipeline):
     """회의별 의안목록을 수집해 옵니다.
-    
+
     Args:
         assembly_number: 몇번 째, 국회의원인지 확인 함
         bill_info_page_size: 회의별 의안목록 API 페이지별 요청할 row 수입니다.
         bill_info_max_pages: 회의별 의안목록 API 최대 요청 페이지 수입니다.
     """
-    def __init__ (
+
+    def __init__(
         self,
-        assembly_number: int = 22, 
+        assembly_number: int = 22,
         bill_info_page_size=1000,
-        bill_info_max_pages=300,):
-        
+        bill_info_max_pages=300,
+    ):
+
         self.connection = get_postgres_connection()
         self.run_id: Optional[str] = None
         self.now_time: datetime = datetime.now()
-        
+
         self.extractor = BillInfoExtractor(
             url=CONGRESS_BILL_LIST_URL,
             assembly_number=assembly_number,
@@ -297,7 +303,7 @@ class BillInfoPipeline(BasePipeline):
         )
         self.transformer = BillInfoTransformer()
         self.loader = BillInfoLoader(self.connection)
-        
+
     def run(self):
         self.start_monitoring(
             pipeline_name="BillInfoPipeline",
@@ -307,32 +313,33 @@ class BillInfoPipeline(BasePipeline):
             },
         )
         self.loader.run_id = self.run_id
-        
+
         try:
-            logger.info(f"회의별 의안목록에서 안건 목록 수집 시작 (run_id={self.run_id})")
+            self.log_info(
+                f"회의별 의안목록에서 안건 목록 수집 시작 (run_id={self.run_id})"
+            )
             raw_bill_info = self.extractor.extract()
             bill_info_rows = self.transformer.transform(raw_bill_info)
-            logger.info(f"{self.now_time}의 안건 목록 변환 완료: {len(bill_info_rows)}건")
-            
+            self.log_info(
+                f"{self.now_time}의 안건 목록 변환 완료: {len(bill_info_rows)}건"
+            )
+
             self.loader.create_table()
             bill_info_count = self.loader.load_many(bill_info_rows)
-            logger.info(f"bill_info 저장 완료: {bill_info_count}건")
-            
+            self.log_info(f"bill_info 저장 완료: {bill_info_count}건")
+
             self.finish_monitoring(status="success")
             return {
                 "run_id": self.run_id,
                 "bill_info": bill_info_count,
             }
         except Exception as exc:
-            self.finish_monitoring(status="failed", error_message=str(exc()))
+            self.finish_monitoring(status="failed", error_message=str(exc))
             raise
 
-    
-    
-    
+
 # ======== BillUrlETL ===========
 # BillUrl는 진짜 pdfurl을 보여주기 위해 만들어준 파일
-
 class BillUrlExtractor(BaseExtractor):
     """안건 ID별 회의록 PDF 정보를 수집합니다.
 
@@ -395,7 +402,7 @@ class BillUrlExtractor(BaseExtractor):
                 as_completed(futures),
                 total=len(futures),
                 desc="안건별 회의록 URL 수집",
-                unit="bill",
+                unit="bill_url",
             ):
                 bill_id, rows = future.result()
                 logger.debug(f"{bill_id} 안건 회의록 {len(rows)}개 수집")
@@ -403,8 +410,6 @@ class BillUrlExtractor(BaseExtractor):
 
         self.log_info(f"안건 회의록 데이터 로드 완료: 총 {len(all_rows)}개")
         return all_rows
-
-
 
 
 class BillUrlTransformer(BaseTransformer):
@@ -435,6 +440,8 @@ class BillUrlTransformer(BaseTransformer):
                     "get_pdf": False,
                 }
             )
+
+        self.log_info(f"안건 회의록 전환 완료: {len(transformed)}건")
 
         return transformed
 
@@ -475,7 +482,7 @@ class BillUrlLoader(BaseLoader):
         ]
         for query in queries:
             self._execute_query(query)
-        logger.info("bill_url 테이블 준비 완료")
+        self.log_info("bill_url 테이블 준비 완료")
 
     def load(self, bill_url_data: Dict):
         """안건 회의록 PDF row 하나를 upsert합니다.
@@ -557,111 +564,86 @@ class BillUrlLoader(BaseLoader):
             count += 1
         return count
 
-# ======== BillCollectionPipeline ===========
+    def fetch_pending_bill_ids(self) -> List[str]:
+        """bill_info에는 있지만 bill_url에 아직 없는 안건 ID를 조회합니다."""
+        query = """
+            SELECT DISTINCT bi.bill_id
+            FROM bill_info bi
+            WHERE bi.bill_id IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM bill_url bu
+                  WHERE bu.agenda_id = bi.bill_id
+              )
+            ORDER BY bi.bill_id;
+        """
+        rows = self._execute_query(query)
+        return [row["bill_id"] for row in rows]
 
-class BillCollectionPipeline(BasePipeline):
-    """안건 목록과 안건별 회의록 PDF URL을 수집해 DB에 저장합니다.
+
+class BillUrlPipeline(BasePipeline):
+    """의안별 회의록 목록을 바탕으로 PDF URL을 수집해 DB에 저장합니다.
 
     Args:
-        assembly_number: 수집할 국회 대수입니다.
-        load_bill_urls: 안건별 회의록 PDF URL도 함께 수집할지 여부입니다.
-        bill_info_page_size: 안건 목록 API 페이지당 요청할 row 수입니다.
-        bill_info_max_pages: 안건 목록 API 최대 요청 페이지 수입니다.
-        bill_url_page_size: 안건 회의록 API 페이지당 요청할 row 수입니다.
-        bill_url_max_pages: 안건별 회의록 API 최대 요청 페이지 수입니다.
-        bill_url_max_workers: 안건 회의록을 동시에 조회할 최대 작업자 수입니다.
     """
 
     def __init__(
         self,
-        assembly_number=22,
-        load_bill_urls=True,
-        bill_info_page_size=1000,
-        bill_info_max_pages=300,
         bill_url_page_size=100,
         bill_url_max_pages=10,
-        bill_url_max_workers=3,
+        bill_url_max_workers=5,
     ):
         self.connection = get_postgres_connection()
-        self.load_bill_urls = load_bill_urls
         self.bill_url_page_size = bill_url_page_size
         self.bill_url_max_pages = bill_url_max_pages
         self.bill_url_max_workers = bill_url_max_workers
 
-        self.extractor = BillInfoExtractor(
-            url=CONGRESS_BILL_LIST_URL,
-            assembly_number=assembly_number,
-            page_size=bill_info_page_size,
-            max_pages=bill_info_max_pages,
-        )
-        self.transformer = BillInfoTransformer()
-        self.bill_info_loader = BillInfoLoader(self.connection)
-        self.bill_url_transformer = BillUrlTransformer()
-        self.bill_url_loader = BillUrlLoader(self.connection)
+        self.transformer = BillUrlTransformer()
+        self.loader = BillUrlLoader(self.connection)
         self.run_id: Optional[str] = None
 
     def run(self):
-        """안건 목록 수집과 선택적 안건 회의록 PDF URL 수집을 실행합니다.
-
-        Returns:
-            bill_info와 bill_url 저장 시도 건수를 담은 딕셔너리입니다.
-        """
         self.start_monitoring(
-            pipeline_name="BillCollectionPipeline",
+            pipeline_name="BillUrlPipeline",
             meta={
-                "load_bill_urls": self.load_bill_urls,
-                "bill_info_page_size": self.extractor.page_size,
-                "bill_info_max_pages": self.extractor.max_pages,
                 "bill_url_page_size": self.bill_url_page_size,
                 "bill_url_max_pages": self.bill_url_max_pages,
                 "bill_url_max_workers": self.bill_url_max_workers,
             },
         )
-        self.bill_info_loader.run_id = self.run_id
-        self.bill_url_loader.run_id = self.run_id
+        self.loader.run_id = self.run_id
 
         try:
-            logger.info(f"안건 목록 수집 시작 (run_id={self.run_id})")
-            raw_bill_info = self.extractor.extract()
-            bill_info_rows = self.transformer.transform(raw_bill_info)
-            logger.info(f"안건 목록 변환 완료: {len(bill_info_rows)}건")
+            self.log_info("수집해야할 안건 회의록 개수 확인")
+            bill_ids_list = self.loader.fetch_pending_bill_ids()
 
-            self.bill_info_loader.create_table()
-            bill_info_count = self.bill_info_loader.load_many(bill_info_rows)
-            logger.info(f"bill_info 저장 완료: {bill_info_count}건")
+            self.log_info(f"안건 회의록 수집 시작: {len(bill_ids_list)}개 안건")
+            self.extractor = BillUrlExtractor(
+                url=CONGRESS_BILL_CONF_LIST_URL,
+                bill_ids=bill_ids_list,
+                page_size=self.bill_url_page_size,
+                max_pages=self.bill_url_max_pages,
+                max_workers=self.bill_url_max_workers,
+            )
+            raw_bill_urls = self.extractor.extract()
 
-            bill_url_count = 0
-            if self.load_bill_urls:
-                bill_ids = sorted(
-                    {row["bill_id"] for row in bill_info_rows if row.get("bill_id")}
-                )
-                logger.info(f"안건 회의록 수집 시작: {len(bill_ids)}개 안건")
-                bill_url_extractor = BillUrlExtractor(
-                    url=CONGRESS_BILL_CONF_LIST_URL,
-                    bill_ids=bill_ids,
-                    page_size=self.bill_url_page_size,
-                    max_pages=self.bill_url_max_pages,
-                    max_workers=self.bill_url_max_workers,
-                )
-                raw_bill_urls = bill_url_extractor.extract()
-                bill_url_rows = self.bill_url_transformer.transform(raw_bill_urls)
-                logger.info(f"안건 회의록 변환 완료: {len(bill_url_rows)}건")
+            self.log_info(f"안건 회의록 전환 시작: {len(raw_bill_urls)}건")
+            bill_url_rows = self.transformer.transform(raw_bill_urls)
 
-                self.bill_url_loader.create_table()
-                bill_url_count = self.bill_url_loader.load_many(bill_url_rows)
-                logger.info(f"bill_url 저장 완료: {bill_url_count}건")
+            self.loader.create_table()
+            bill_url_count = self.loader.load_many(bill_url_rows)
+            self.log_info(f"bill_url 저장 완료: {bill_url_count}건")
 
             self.finish_monitoring(status="success")
             return {
                 "run_id": self.run_id,
-                "bill_info": bill_info_count,
                 "bill_url": bill_url_count,
             }
         except Exception as exc:
             self.finish_monitoring(status="failed", error_message=str(exc))
             raise
 
+
 if __name__ == "__main__":
-    bill_info_pipeline = BillInfoPipeline()
-    bill_info_pipeline.run()
-    
+    bill_url_pipeline = BillUrlPipeline()
+    bill_url_pipeline.run()

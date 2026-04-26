@@ -40,9 +40,9 @@ class BaseTransformer(ABC):
             data: 변환할 원본 데이터입니다.
         """
         pass
-    
+
     def log_info(self, message: str):
-        """수집기 로그 메시지를 남깁니다.
+        """변환기 로그 메시지를 남깁니다.
 
         Args:
             message: 로그에 남길 메시지입니다.
@@ -72,6 +72,14 @@ class BasePipeline(ABC):
         """파이프라인을 실행합니다."""
         pass
 
+    def log_info(self, message: str):
+        """파이프라인 로그 메시지를 남깁니다.
+
+        Args:
+            message: 로그에 남길 메시지입니다.
+        """
+        logger.info(f"[Pipeline] {message}")
+
     def start_monitoring(
         self,
         pipeline_name: str,
@@ -90,12 +98,16 @@ class BasePipeline(ABC):
             ValueError: connection이 준비되지 않은 경우입니다.
         """
         if self.connection is None:
-            raise ValueError("connection이 설정되지 않아 모니터링을 시작할 수 없습니다.")
+            raise ValueError(
+                "connection이 설정되지 않아 모니터링을 시작할 수 없습니다."
+            )
         ensure_monitoring_tables(self.connection)
         self.run_id = start_pipeline_run(self.connection, pipeline_name, meta)
         return self.run_id
 
-    def finish_monitoring(self, status: str, error_message: Optional[str] = None) -> None:
+    def finish_monitoring(
+        self, status: str, error_message: Optional[str] = None
+    ) -> None:
         """파이프라인 실행 모니터링을 종료합니다.
 
         Args:
@@ -125,6 +137,14 @@ class BaseLoader(ABC):
         """
         self.connection = connection
         self.run_id = run_id
+
+    def log_info(self, message: str):
+        """저장기 로그 메시지를 남깁니다.
+
+        Args:
+            message: 로그에 남길 메시지입니다.
+        """
+        logger.info(f"[Loader] {message}")
 
     def _execute_query(
         self,

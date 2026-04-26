@@ -4,7 +4,6 @@ from backend.api.services.database import Database
 
 
 class SpeakerService:
-
     @staticmethod
     def get_all(
         name_search: str | None = None,

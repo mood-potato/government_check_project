@@ -7,10 +7,16 @@ import requests
 from loguru import logger
 from tqdm import tqdm
 
-MAIN_CONGRESS_SCHEDULE_URL = "https://open.assembly.go.kr/portal/openapi/nekcaiymatialqlxr"
-MAIN_CONGRESS_SPEECH_PDF_URL = "https://open.assembly.go.kr/portal/openapi/nzbyfwhwaoanttzje"
+MAIN_CONGRESS_SCHEDULE_URL = (
+    "https://open.assembly.go.kr/portal/openapi/nekcaiymatialqlxr"
+)
+MAIN_CONGRESS_SPEECH_PDF_URL = (
+    "https://open.assembly.go.kr/portal/openapi/nzbyfwhwaoanttzje"
+)
 CONGRESS_BILL_LIST_URL = "https://open.assembly.go.kr/portal/openapi/VCONFBILLLIST"
-CONGRESS_BILL_CONF_LIST_URL = "https://open.assembly.go.kr/portal/openapi/VCONFBILLCONFLIST"
+CONGRESS_BILL_CONF_LIST_URL = (
+    "https://open.assembly.go.kr/portal/openapi/VCONFBILLCONFLIST"
+)
 
 # HACK: 코드가 하나 줄음 : 단점은 플레이라이트나 bs4 사용시 불안정, 장점은 명시적이고 확실함. 하지만, 데이터를 가져오는 방법은 안정적인 API로 진행하자.
 # CONGRESS_BILL_CONF_PAGE_URL = "https://open.assembly.go.kr/portal/data/service/selectServicePage.do/OOWY4R001216HX11526"
@@ -18,8 +24,6 @@ CONGRESS_BILL_CONF_LIST_URL = "https://open.assembly.go.kr/portal/openapi/VCONFB
 
 DEFAULT_MAX_WORKERS = 3
 DEFAULT_REQUEST_TIMEOUT = (3.05, 30)
-
-
 
 
 def request_paginated_data(
@@ -110,7 +114,10 @@ def _fetch_single_page(
         response.raise_for_status()
         data = response.json()
 
-        if "RESULT" in data and data["RESULT"]["MESSAGE"] == "해당하는 데이터가 없습니다.":
+        if (
+            "RESULT" in data
+            and data["RESULT"]["MESSAGE"] == "해당하는 데이터가 없습니다."
+        ):
             logger.debug(f"데이터 없음, pIndex={pIndex}")
             return []
 
@@ -123,7 +130,12 @@ def _fetch_single_page(
             rows = [rows]
         logger.debug(f"{pIndex} 페이지 데이터 추가 (총 {len(rows)}개)")
         return rows
-    except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError, IndexError) as e:
+    except (
+        requests.exceptions.RequestException,
+        json.JSONDecodeError,
+        KeyError,
+        IndexError,
+    ) as e:
         logger.error(f"❌ 페이지 {pIndex} 처리 실패: {e}")
         return []
 
@@ -134,7 +146,10 @@ def get_existing_pdf_dates(connection) -> Set[str]:
     with connection.cursor() as cur:
         cur.execute(query)
         rows = cur.fetchall()
-        return {row[0].strftime("%Y-%m-%d") if hasattr(row[0], "strftime") else str(row[0]) for row in rows}
+        return {
+            row[0].strftime("%Y-%m-%d") if hasattr(row[0], "strftime") else str(row[0])
+            for row in rows
+        }
 
 
 def get_existing_pdf_urls(connection) -> Set[str]:

@@ -57,7 +57,10 @@ def test_home_service_maps_speakers_to_featured_members(monkeypatch):
             "summary": "21대 예시당",
         },
     ]
-    assert home["disclaimer"] == "자동 분석으로 비교된 발언입니다. 원문 맥락을 함께 확인하세요."
+    assert (
+        home["disclaimer"]
+        == "자동 분석으로 비교된 발언입니다. 원문 맥락을 함께 확인하세요."
+    )
 
 
 def test_home_service_returns_empty_featured_members_when_no_speakers(monkeypatch):

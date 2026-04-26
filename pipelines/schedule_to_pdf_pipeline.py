@@ -359,7 +359,9 @@ class ScheduleToPDFPipeline(BasePipeline):
             if self.days_back:
                 cutoff = get_date_range_filter(self.days_back)
                 meeting_dates = [d for d in meeting_dates if d >= cutoff]
-                logger.info(f"✅ 최근 {self.days_back}일 필터 적용: {len(meeting_dates)}건")
+                logger.info(
+                    f"✅ 최근 {self.days_back}일 필터 적용: {len(meeting_dates)}건"
+                )
 
                 if not meeting_dates:
                     logger.info("✅ 필터 후 처리할 날짜가 없습니다.")

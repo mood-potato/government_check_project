@@ -23,13 +23,7 @@ def get_speaker_documents(
     client: Elasticsearch | None = None,
     index_name: str = DEFAULT_INDEX_NAME,
 ):
-    query = {
-        "query": {
-            "match": {
-                "speaker": speaker_name
-            }
-        }
-    }
+    query = {"query": {"match": {"speaker": speaker_name}}}
 
     es_client = client or get_elasticsearch_client()
     res = es_client.search(index=index_name, body=query, size=100)
