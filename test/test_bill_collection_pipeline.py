@@ -278,7 +278,7 @@ def test_request_paginated_data_uses_conservative_workers_and_timeout(monkeypatc
     )
 
     assert executor_calls == [3]
-    assert request_calls[0]["timeout"] == (3.05, 30)
+    assert request_calls[0]["timeout"] == (5, 30)
 
 
 def test_request_paginated_data_shows_progress_and_batches_requests(monkeypatch):

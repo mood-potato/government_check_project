@@ -23,7 +23,7 @@ CONGRESS_BILL_CONF_LIST_URL = (
 # CONGRESS_BILL_CONF_DOWNLOAD_CSV_XPATH ="/html/body/div[3]/div[7]/div/div[2]/div/div/div/section[2]/ul/li/dl/dd/a[2]"
 
 DEFAULT_MAX_WORKERS = 3
-DEFAULT_REQUEST_TIMEOUT = (3.05, 30)
+DEFAULT_REQUEST_TIMEOUT = (5, 30)
 
 
 def request_paginated_data(
