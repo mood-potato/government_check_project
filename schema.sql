@@ -1,7 +1,7 @@
 -- ============================================================
 -- speakers
 -- ============================================================
-CREATE TABLE speakers (
+CREATE TABLE IF NOT EXISTS  speakers (
     id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     mona_code        TEXT        NOT NULL,
     assembly_number  INT         NOT NULL,
@@ -23,7 +23,7 @@ CREATE INDEX idx_speakers_name ON speakers (name);
 -- ============================================================
 -- pdf_url
 -- ============================================================
-CREATE TABLE pdf_url (
+CREATE TABLE IF NOT EXISTS  pdf_url (
     pdf_url_id       UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     confer_number    INT,                              -- 회의 회차 번호
     dae_number       INT,                              -- 대수
@@ -42,7 +42,7 @@ CREATE TABLE pdf_url (
 -- ============================================================
 -- speeches
 -- ============================================================
-CREATE TABLE speeches (
+CREATE TABLE IF NOT EXISTS  speeches (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     pdf_url_id      TEXT        NOT NULL,              -- 관련 PDF ID
     speaker_id      UUID        REFERENCES speakers (id),
@@ -70,7 +70,7 @@ CREATE INDEX idx_speeches_vectorized ON speeches (vectorized);
 -- ============================================================
 -- bill_info  (회의별 의안 목록)
 -- ============================================================
-CREATE TABLE bill_info (
+CREATE TABLE IF NOT EXISTS  bill_info (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     meeting_id      TEXT        NOT NULL,              -- 회의 ID (예: N054183)
     dae_number      INT         NOT NULL,              -- 대수 (예: 22)
@@ -88,7 +88,7 @@ CREATE TABLE bill_info (
 -- ============================================================
 -- bill_url  (의안별 PDF 다운로드 정보)
 -- ============================================================
-CREATE TABLE bill_url (
+CREATE TABLE IF NOT EXISTS  bill_url (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     agenda_id       TEXT        NOT NULL,              -- 의안 ID (PRC_...)
     agenda_name     TEXT        NOT NULL,              -- 의안명
@@ -102,3 +102,40 @@ CREATE TABLE bill_url (
 
     CONSTRAINT idx_bill_url_agenda_meeting_download UNIQUE (agenda_id, meeting_id, download_url)
 );
+
+-- ============================================================
+-- pipeline_runs / pipeline_row_events (모니터링)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS  pipeline_runs (
+    run_id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    pipeline_name   TEXT        NOT NULL,
+    status          TEXT        NOT NULL DEFAULT 'running',
+    started_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    finished_at     TIMESTAMPTZ,
+    inserted_count  INT         NOT NULL DEFAULT 0,
+    updated_count   INT         NOT NULL DEFAULT 0,
+    skipped_count   INT         NOT NULL DEFAULT 0,
+    failed_count    INT         NOT NULL DEFAULT 0,
+    error_message   TEXT,
+    meta            JSONB       NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS  pipeline_row_events (
+    id              BIGSERIAL   PRIMARY KEY,
+    run_id          UUID        NOT NULL REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
+    target_table    TEXT        NOT NULL,
+    record_key      TEXT        NOT NULL,
+    action          TEXT        NOT NULL,
+    source_date     DATE,
+    occurred_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    meta            JSONB       NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_started_at
+ON pipeline_runs (started_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_pipeline_row_events_run_id
+ON pipeline_row_events (run_id);
+
+CREATE INDEX IF NOT EXISTS idx_pipeline_row_events_table_date
+ON pipeline_row_events (target_table, source_date);

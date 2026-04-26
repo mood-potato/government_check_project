@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from loguru import logger
+from tqdm import tqdm
 
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
 from pipelines.utils.common import OPEN_GOVERMENT_API_KEY
@@ -70,6 +71,8 @@ def format_openapi_date(value: Optional[str]) -> Optional[str]:
 
     return datetime.strptime(value, "%Y%m%d").date().isoformat()
 
+# ======== BillInfoETL===========
+# BillInfo는 BillUrl을 가져오기 위해 의안 번호를 가져오는 사이트임
 
 class BillInfoExtractor(BaseExtractor):
     """국회 Open API에서 회의별 안건 목록을 수집합니다.
@@ -93,13 +96,14 @@ class BillInfoExtractor(BaseExtractor):
         self.page_size = page_size
         self.max_pages = max_pages
 
+    # TODO: 날짜가 없어서 개수를 세서 증분 저장을 하도록 최신 몇개인지 가져오도록 수정해야함 
     def extract(self):
         """안건 목록 원본 row를 수집합니다.
 
         Returns:
             VCONFBILLLIST API에서 받은 원본 row 딕셔너리 목록입니다.
         """
-        self.log_info(f"안건 목록 데이터를 가져옵니다: {self.url}")
+        self.log_info(f"회의별 의안 목록 데이터를 가져옵니다: {self.url}")
         key_name = self.url[43:]
         base_params = {
             "KEY": OPEN_GOVERMENT_API_KEY,
@@ -108,6 +112,7 @@ class BillInfoExtractor(BaseExtractor):
         if self.assembly_number:
             base_params["ERACO"] = f"제{self.assembly_number}대"
 
+        # NOTE: 반복적으로 데이터를 가져오도록 설정함, 현재 최대 30만건까지 가져옴. 
         rows = request_paginated_data(
             self.url,
             base_params,
@@ -115,9 +120,218 @@ class BillInfoExtractor(BaseExtractor):
             page_size=self.page_size,
             max_pages=self.max_pages,
         )
-        self.log_info(f"안건 목록 데이터 로드 완료: 총 {len(rows)}개")
+        self.log_info(f"회의별 의안 목록 데이터 로드 완료: 총 {len(rows)}개")
         return rows
+    
+class BillInfoTransformer(BaseTransformer):
+    """안건 목록 API 응답을 bill_info 저장 형식으로 변환합니다."""
 
+    def transform(self, data: List[Dict]) -> List[Dict]:
+        """안건 목록 원본 row를 DB 저장용 row로 변환합니다.
+
+        Args:
+            data: VCONFBILLLIST API에서 받은 원본 row 목록입니다.
+
+        Returns:
+            bill_info 테이블 컬럼명에 맞춘 딕셔너리 목록입니다.
+        """
+        transformed = []
+        self.log_info("회의별 의안 목록 데이터 전환 시작")
+
+        for item in data:
+            bill_order, bill_name = split_bill_order(item.get("BILL_NM"))
+            transformed.append(
+                {
+                    "meeting_id": item.get("CONF_ID"),
+                    "dae_number": parse_korean_number(item.get("ERACO")),
+                    "session_number": parse_korean_number(item.get("SESS")),
+                    "confer_number": parse_korean_number(item.get("DGR")),
+                    "bill_id": item.get("BILL_ID"),
+                    "bill_name": bill_name,
+                    "bill_order": bill_order,
+                    "detail_link": item.get("LINK_URL"),
+                }
+            )
+        self.log_info(f"회의별 의안 목록 데이터 전환 완료: 총 {len(transformed)}개")
+
+        return transformed
+
+class BillInfoLoader(BaseLoader):
+    """정규화된 안건 목록을 bill_info 테이블에 저장합니다.
+
+    Args:
+        connection: 쓰기에 사용할 PostgreSQL 연결 객체입니다.
+    """
+
+    def __init__(self, connection, run_id: Optional[str] = None):
+        super().__init__(connection, run_id)
+
+    def create_table(self):
+        """bill_info 테이블과 인덱스를 생성합니다."""
+        queries = [
+            """
+            CREATE TABLE IF NOT EXISTS bill_info (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                meeting_id TEXT NOT NULL,
+                dae_number INT NOT NULL,
+                session_number INT NOT NULL,
+                confer_number INT NOT NULL,
+                bill_id TEXT NOT NULL,
+                bill_name TEXT NOT NULL,
+                bill_order INT,
+                detail_link TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            """,
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_bill_info_meeting_bill
+            ON bill_info (meeting_id, bill_id);
+            """,
+            """CREATE INDEX IF NOT EXISTS idx_bill_info_bill_id ON bill_info (bill_id);""",
+        ]
+        for query in queries:
+            self._execute_query(query)
+        logger.info("회의별 의안 목록 bill_info 테이블 준비 완료")
+
+    def load(self, bill_info_data: Dict):
+        """안건 목록 row 하나를 upsert합니다.
+
+        Args:
+            bill_info_data: bill_info 컬럼명에 맞춘 딕셔너리입니다.
+
+        Returns:
+            공통 쿼리 실행기가 반환한 결과입니다.
+        """
+        query = """
+            INSERT INTO bill_info (
+                meeting_id,
+                dae_number,
+                session_number,
+                confer_number,
+                bill_id,
+                bill_name,
+                bill_order,
+                detail_link
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (meeting_id, bill_id) DO UPDATE SET
+                dae_number = EXCLUDED.dae_number,
+                session_number = EXCLUDED.session_number,
+                confer_number = EXCLUDED.confer_number,
+                bill_name = EXCLUDED.bill_name,
+                bill_order = EXCLUDED.bill_order,
+                detail_link = EXCLUDED.detail_link
+            RETURNING id, (xmax = 0) AS inserted;
+        """
+        params = (
+            bill_info_data.get("meeting_id"),
+            bill_info_data.get("dae_number"),
+            bill_info_data.get("session_number"),
+            bill_info_data.get("confer_number"),
+            bill_info_data.get("bill_id"),
+            bill_info_data.get("bill_name"),
+            bill_info_data.get("bill_order"),
+            bill_info_data.get("detail_link"),
+        )
+        result = self._execute_query(query, params)
+
+        if self.run_id:
+            if result and result[0].get("inserted"):
+                action = "inserted"
+            elif result:
+                action = "updated"
+            else:
+                action = "skipped"
+
+            self.log_load_row_event(
+                target_table="bill_info",
+                record_key=f"{bill_info_data.get('meeting_id')}:{bill_info_data.get('bill_id')}",
+                action=action,
+                meta={
+                    "bill_name": bill_info_data.get("bill_name"),
+                    "session_number": bill_info_data.get("session_number"),
+                    "confer_number": bill_info_data.get("confer_number"),
+                },
+            )
+        return result
+
+    def load_many(self, bill_info_rows: Iterable[Dict]):
+        """안건 목록 row 여러 개를 upsert합니다.
+
+        Args:
+            bill_info_rows: bill_info 컬럼명에 맞춘 딕셔너리 목록입니다.
+
+        Returns:
+            저장을 시도한 row 수입니다.
+        """
+        count = 0
+        for row in bill_info_rows:
+            self.load(row)
+            count += 1
+        return count
+    
+    
+class BillInfoPipeline(BasePipeline):
+    """회의별 의안목록을 수집해 옵니다.
+    
+    Args:
+        assembly_number: 몇번 째, 국회의원인지 확인 함
+        bill_info_page_size: 회의별 의안목록 API 페이지별 요청할 row 수입니다.
+        bill_info_max_pages: 회의별 의안목록 API 최대 요청 페이지 수입니다.
+    """
+    def __init__ (
+        self,
+        assembly_number: int = 22, 
+        bill_info_page_size=1000,
+        bill_info_max_pages=300,):
+        
+        self.connection = get_postgres_connection()
+        self.run_id: Optional[str] = None
+        self.now_time: datetime = datetime.now()
+        
+        self.extractor = BillInfoExtractor(
+            url=CONGRESS_BILL_LIST_URL,
+            assembly_number=assembly_number,
+            page_size=bill_info_page_size,
+            max_pages=bill_info_max_pages,
+        )
+        self.transformer = BillInfoTransformer()
+        self.loader = BillInfoLoader(self.connection)
+        
+    def run(self):
+        self.start_monitoring(
+            pipeline_name="BillInfoPipeline",
+            meta={
+                "bill_info_page_size": self.extractor.page_size,
+                "bill_info_max_pages": self.extractor.max_pages,
+            },
+        )
+        self.loader.run_id = self.run_id
+        
+        try:
+            logger.info(f"회의별 의안목록에서 안건 목록 수집 시작 (run_id={self.run_id})")
+            raw_bill_info = self.extractor.extract()
+            bill_info_rows = self.transformer.transform(raw_bill_info)
+            logger.info(f"{self.now_time}의 안건 목록 변환 완료: {len(bill_info_rows)}건")
+            
+            self.loader.create_table()
+            bill_info_count = self.loader.load_many(bill_info_rows)
+            logger.info(f"bill_info 저장 완료: {bill_info_count}건")
+            
+            self.finish_monitoring(status="success")
+            return {
+                "run_id": self.run_id,
+                "bill_info": bill_info_count,
+            }
+        except Exception as exc:
+            self.finish_monitoring(status="failed", error_message=str(exc()))
+            raise
+
+    
+    
+    
+# ======== BillUrlETL ===========
+# BillUrl는 진짜 pdfurl을 보여주기 위해 만들어준 파일
 
 class BillUrlExtractor(BaseExtractor):
     """안건 ID별 회의록 PDF 정보를 수집합니다.
@@ -136,7 +350,7 @@ class BillUrlExtractor(BaseExtractor):
         bill_ids: Iterable[str],
         page_size=100,
         max_pages=10,
-        max_workers=5,
+        max_workers=3,
     ):
         self.url = url
         self.bill_ids = list(bill_ids)
@@ -166,6 +380,7 @@ class BillUrlExtractor(BaseExtractor):
                 date_value=bill_id,
                 page_size=self.page_size,
                 max_pages=self.max_pages,
+                show_progress=False,
             )
             return bill_id, rows
 
@@ -176,45 +391,20 @@ class BillUrlExtractor(BaseExtractor):
                 for bill_id in self.bill_ids
                 if bill_id
             ]
-            for future in as_completed(futures):
+            for future in tqdm(
+                as_completed(futures),
+                total=len(futures),
+                desc="안건별 회의록 URL 수집",
+                unit="bill",
+            ):
                 bill_id, rows = future.result()
-                self.log_info(f"{bill_id} 안건 회의록 {len(rows)}개 수집")
+                logger.debug(f"{bill_id} 안건 회의록 {len(rows)}개 수집")
                 all_rows.extend(rows)
 
         self.log_info(f"안건 회의록 데이터 로드 완료: 총 {len(all_rows)}개")
         return all_rows
 
 
-class BillInfoTransformer(BaseTransformer):
-    """안건 목록 API 응답을 bill_info 저장 형식으로 변환합니다."""
-
-    def transform(self, data: List[Dict]) -> List[Dict]:
-        """안건 목록 원본 row를 DB 저장용 row로 변환합니다.
-
-        Args:
-            data: VCONFBILLLIST API에서 받은 원본 row 목록입니다.
-
-        Returns:
-            bill_info 테이블 컬럼명에 맞춘 딕셔너리 목록입니다.
-        """
-        transformed = []
-
-        for item in data:
-            bill_order, bill_name = split_bill_order(item.get("BILL_NM"))
-            transformed.append(
-                {
-                    "meeting_id": item.get("CONF_ID"),
-                    "dae_number": parse_korean_number(item.get("ERACO")),
-                    "session_number": parse_korean_number(item.get("SESS")),
-                    "confer_number": parse_korean_number(item.get("DGR")),
-                    "bill_id": item.get("BILL_ID"),
-                    "bill_name": bill_name,
-                    "bill_order": bill_order,
-                    "detail_link": item.get("LINK_URL"),
-                }
-            )
-
-        return transformed
 
 
 class BillUrlTransformer(BaseTransformer):
@@ -249,100 +439,6 @@ class BillUrlTransformer(BaseTransformer):
         return transformed
 
 
-class BillInfoLoader(BaseLoader):
-    """정규화된 안건 목록을 bill_info 테이블에 저장합니다.
-
-    Args:
-        connection: 쓰기에 사용할 PostgreSQL 연결 객체입니다.
-    """
-
-    def __init__(self, connection):
-        super().__init__(connection)
-
-    def create_table(self):
-        """bill_info 테이블과 인덱스를 생성합니다."""
-        queries = [
-            """
-            CREATE TABLE IF NOT EXISTS bill_info (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                meeting_id TEXT NOT NULL,
-                dae_number INT NOT NULL,
-                session_number INT NOT NULL,
-                confer_number INT NOT NULL,
-                bill_id TEXT NOT NULL,
-                bill_name TEXT NOT NULL,
-                bill_order INT,
-                detail_link TEXT,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
-            """,
-            """
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_bill_info_meeting_bill
-            ON bill_info (meeting_id, bill_id);
-            """,
-            """CREATE INDEX IF NOT EXISTS idx_bill_info_bill_id ON bill_info (bill_id);""",
-        ]
-        for query in queries:
-            self._execute_query(query)
-        logger.info("bill_info 테이블 준비 완료")
-
-    def load(self, bill_info_data: Dict):
-        """안건 목록 row 하나를 upsert합니다.
-
-        Args:
-            bill_info_data: bill_info 컬럼명에 맞춘 딕셔너리입니다.
-
-        Returns:
-            공통 쿼리 실행기가 반환한 결과입니다.
-        """
-        query = """
-            INSERT INTO bill_info (
-                meeting_id,
-                dae_number,
-                session_number,
-                confer_number,
-                bill_id,
-                bill_name,
-                bill_order,
-                detail_link
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (meeting_id, bill_id) DO UPDATE SET
-                dae_number = EXCLUDED.dae_number,
-                session_number = EXCLUDED.session_number,
-                confer_number = EXCLUDED.confer_number,
-                bill_name = EXCLUDED.bill_name,
-                bill_order = EXCLUDED.bill_order,
-                detail_link = EXCLUDED.detail_link;
-        """
-        params = (
-            bill_info_data.get("meeting_id"),
-            bill_info_data.get("dae_number"),
-            bill_info_data.get("session_number"),
-            bill_info_data.get("confer_number"),
-            bill_info_data.get("bill_id"),
-            bill_info_data.get("bill_name"),
-            bill_info_data.get("bill_order"),
-            bill_info_data.get("detail_link"),
-        )
-        return self._execute_query(query, params)
-
-    def load_many(self, bill_info_rows: Iterable[Dict]):
-        """안건 목록 row 여러 개를 upsert합니다.
-
-        Args:
-            bill_info_rows: bill_info 컬럼명에 맞춘 딕셔너리 목록입니다.
-
-        Returns:
-            저장을 시도한 row 수입니다.
-        """
-        count = 0
-        for row in bill_info_rows:
-            self.load(row)
-            count += 1
-        return count
-
-
 class BillUrlLoader(BaseLoader):
     """정규화된 안건 회의록 PDF 정보를 bill_url 테이블에 저장합니다.
 
@@ -350,8 +446,8 @@ class BillUrlLoader(BaseLoader):
         connection: 쓰기에 사용할 PostgreSQL 연결 객체입니다.
     """
 
-    def __init__(self, connection):
-        super().__init__(connection)
+    def __init__(self, connection, run_id: Optional[str] = None):
+        super().__init__(connection, run_id)
 
     def create_table(self):
         """bill_url 테이블과 인덱스를 생성합니다."""
@@ -407,7 +503,8 @@ class BillUrlLoader(BaseLoader):
                 meeting_type = EXCLUDED.meeting_type,
                 dae_number = EXCLUDED.dae_number,
                 meeting_date = EXCLUDED.meeting_date,
-                get_pdf = bill_url.get_pdf;
+                get_pdf = bill_url.get_pdf
+            RETURNING id, (xmax = 0) AS inserted;
         """
         params = (
             bill_url_data.get("agenda_id"),
@@ -419,7 +516,31 @@ class BillUrlLoader(BaseLoader):
             bill_url_data.get("download_url"),
             bill_url_data.get("get_pdf", False),
         )
-        return self._execute_query(query, params)
+        result = self._execute_query(query, params)
+
+        if self.run_id:
+            if result and result[0].get("inserted"):
+                action = "inserted"
+            elif result:
+                action = "updated"
+            else:
+                action = "skipped"
+
+            self.log_load_row_event(
+                target_table="bill_url",
+                record_key=(
+                    f"{bill_url_data.get('agenda_id')}:"
+                    f"{bill_url_data.get('meeting_id')}:"
+                    f"{bill_url_data.get('download_url')}"
+                ),
+                action=action,
+                source_date=bill_url_data.get("meeting_date"),
+                meta={
+                    "agenda_name": bill_url_data.get("agenda_name"),
+                    "meeting_type": bill_url_data.get("meeting_type"),
+                },
+            )
+        return result
 
     def load_many(self, bill_url_rows: Iterable[Dict]):
         """안건 회의록 PDF row 여러 개를 upsert합니다.
@@ -436,6 +557,7 @@ class BillUrlLoader(BaseLoader):
             count += 1
         return count
 
+# ======== BillCollectionPipeline ===========
 
 class BillCollectionPipeline(BasePipeline):
     """안건 목록과 안건별 회의록 PDF URL을 수집해 DB에 저장합니다.
@@ -458,7 +580,7 @@ class BillCollectionPipeline(BasePipeline):
         bill_info_max_pages=300,
         bill_url_page_size=100,
         bill_url_max_pages=10,
-        bill_url_max_workers=5,
+        bill_url_max_workers=3,
     ):
         self.connection = get_postgres_connection()
         self.load_bill_urls = load_bill_urls
@@ -476,6 +598,7 @@ class BillCollectionPipeline(BasePipeline):
         self.bill_info_loader = BillInfoLoader(self.connection)
         self.bill_url_transformer = BillUrlTransformer()
         self.bill_url_loader = BillUrlLoader(self.connection)
+        self.run_id: Optional[str] = None
 
     def run(self):
         """안건 목록 수집과 선택적 안건 회의록 PDF URL 수집을 실행합니다.
@@ -483,39 +606,62 @@ class BillCollectionPipeline(BasePipeline):
         Returns:
             bill_info와 bill_url 저장 시도 건수를 담은 딕셔너리입니다.
         """
-        logger.info("안건 목록 수집 시작")
-        raw_bill_info = self.extractor.extract()
-        bill_info_rows = self.transformer.transform(raw_bill_info)
-        logger.info(f"안건 목록 변환 완료: {len(bill_info_rows)}건")
+        self.start_monitoring(
+            pipeline_name="BillCollectionPipeline",
+            meta={
+                "load_bill_urls": self.load_bill_urls,
+                "bill_info_page_size": self.extractor.page_size,
+                "bill_info_max_pages": self.extractor.max_pages,
+                "bill_url_page_size": self.bill_url_page_size,
+                "bill_url_max_pages": self.bill_url_max_pages,
+                "bill_url_max_workers": self.bill_url_max_workers,
+            },
+        )
+        self.bill_info_loader.run_id = self.run_id
+        self.bill_url_loader.run_id = self.run_id
 
-        self.bill_info_loader.create_table()
-        bill_info_count = self.bill_info_loader.load_many(bill_info_rows)
-        logger.info(f"bill_info 저장 완료: {bill_info_count}건")
+        try:
+            logger.info(f"안건 목록 수집 시작 (run_id={self.run_id})")
+            raw_bill_info = self.extractor.extract()
+            bill_info_rows = self.transformer.transform(raw_bill_info)
+            logger.info(f"안건 목록 변환 완료: {len(bill_info_rows)}건")
 
-        bill_url_count = 0
-        if self.load_bill_urls:
-            bill_ids = sorted({row["bill_id"] for row in bill_info_rows if row.get("bill_id")})
-            logger.info(f"안건 회의록 수집 시작: {len(bill_ids)}개 안건")
-            bill_url_extractor = BillUrlExtractor(
-                url=CONGRESS_BILL_CONF_LIST_URL,
-                bill_ids=bill_ids,
-                page_size=self.bill_url_page_size,
-                max_pages=self.bill_url_max_pages,
-                max_workers=self.bill_url_max_workers,
-            )
-            raw_bill_urls = bill_url_extractor.extract()
-            bill_url_rows = self.bill_url_transformer.transform(raw_bill_urls)
-            logger.info(f"안건 회의록 변환 완료: {len(bill_url_rows)}건")
+            self.bill_info_loader.create_table()
+            bill_info_count = self.bill_info_loader.load_many(bill_info_rows)
+            logger.info(f"bill_info 저장 완료: {bill_info_count}건")
 
-            self.bill_url_loader.create_table()
-            bill_url_count = self.bill_url_loader.load_many(bill_url_rows)
-            logger.info(f"bill_url 저장 완료: {bill_url_count}건")
+            bill_url_count = 0
+            if self.load_bill_urls:
+                bill_ids = sorted(
+                    {row["bill_id"] for row in bill_info_rows if row.get("bill_id")}
+                )
+                logger.info(f"안건 회의록 수집 시작: {len(bill_ids)}개 안건")
+                bill_url_extractor = BillUrlExtractor(
+                    url=CONGRESS_BILL_CONF_LIST_URL,
+                    bill_ids=bill_ids,
+                    page_size=self.bill_url_page_size,
+                    max_pages=self.bill_url_max_pages,
+                    max_workers=self.bill_url_max_workers,
+                )
+                raw_bill_urls = bill_url_extractor.extract()
+                bill_url_rows = self.bill_url_transformer.transform(raw_bill_urls)
+                logger.info(f"안건 회의록 변환 완료: {len(bill_url_rows)}건")
 
-        return {
-            "bill_info": bill_info_count,
-            "bill_url": bill_url_count,
-        }
+                self.bill_url_loader.create_table()
+                bill_url_count = self.bill_url_loader.load_many(bill_url_rows)
+                logger.info(f"bill_url 저장 완료: {bill_url_count}건")
+
+            self.finish_monitoring(status="success")
+            return {
+                "run_id": self.run_id,
+                "bill_info": bill_info_count,
+                "bill_url": bill_url_count,
+            }
+        except Exception as exc:
+            self.finish_monitoring(status="failed", error_message=str(exc))
+            raise
 
 if __name__ == "__main__":
-    pipeline = BillCollectionPipeline()
+    bill_info_pipeline = BillInfoPipeline()
+    bill_info_pipeline.run()
     

@@ -3,14 +3,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional
 
 from loguru import logger
+from tqdm import tqdm
 
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
 from pipelines.utils.common import OPEN_GOVERMENT_API_KEY
 from pipelines.utils.db import get_postgres_connection
 from pipelines.utils.openapi import (
-    filter_new_dates,
     get_date_range_filter,
-    get_existing_pdf_dates,
+    get_existing_pdf_urls,
     MAIN_CONGRESS_SCHEDULE_URL,
     MAIN_CONGRESS_SPEECH_PDF_URL,
     request_paginated_data,
@@ -99,13 +99,19 @@ class PDFUrlExtractor(BaseExtractor):
                 date_value=date,
                 page_size=self.page_size,
                 max_pages=self.max_pages,
+                show_progress=False,
             )
 
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:
             futures = [
                 executor.submit(fetch_by_date, date) for date in self.meeting_dates
             ]
-            for future in as_completed(futures):
+            for future in tqdm(
+                as_completed(futures),
+                total=len(futures),
+                desc="날짜별 PDF URL 수집",
+                unit="date",
+            ):
                 date, page_data = future.result()
                 if page_data:
                     fetched_dates.add(date)
@@ -134,6 +140,14 @@ class CongressScheduleTransformer(BaseTransformer):
 class PDFUrlTransformer(BaseTransformer):
     """PDF URL 원본 row를 저장 가능한 형태로 병합합니다."""
 
+    def __init__(self, existing_pdf_urls=None):
+        """Transformer를 초기화합니다.
+
+        Args:
+            existing_pdf_urls: 이미 DB에 저장된 PDF URL 집합입니다.
+        """
+        self.existing_pdf_urls = existing_pdf_urls or set()
+
     def transform(self, pdf_data_list: List[Dict]):
         """같은 회의의 PDF URL row를 하나의 데이터로 병합합니다.
 
@@ -152,6 +166,10 @@ class PDFUrlTransformer(BaseTransformer):
         transformed_data = []
         for (date, title, confer_num), group_items in grouped.items():
             merged = group_items[0].copy()
+            pdf_url = merged.get("PDF_LINK_URL")
+            if pdf_url in self.existing_pdf_urls:
+                continue
+
             merged["SUB_NAME"] = "\n".join(
                 item.get("SUB_NAME", "") for item in group_items
             )
@@ -176,8 +194,8 @@ class PDFUrlTransformer(BaseTransformer):
 class PDFUrlLoader(BaseLoader):
     """PDF URL 데이터를 PostgreSQL에 저장합니다."""
 
-    def __init__(self, connection):
-        super().__init__(connection)
+    def __init__(self, connection, run_id: Optional[str] = None):
+        super().__init__(connection, run_id)
 
     def create_table(self):
         """PDF URL 저장 테이블을 생성합니다."""
@@ -207,7 +225,7 @@ class PDFUrlLoader(BaseLoader):
             pdf_url_data: PDF URL transformer가 반환한 데이터입니다.
         """
         try:
-            logger.info(
+            logger.debug(
                 f"➕ PDF URL 삽입 시도: {pdf_url_data.get('date')} - {pdf_url_data.get('sub_name')}"
             )
             query = """
@@ -219,7 +237,8 @@ class PDFUrlLoader(BaseLoader):
                     %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s
                 )
-                ON CONFLICT (date, title, pdf_url) DO NOTHING;
+                ON CONFLICT (date, title, pdf_url) DO NOTHING
+                RETURNING pdf_url_id;
             """
             params = (
                 pdf_url_data.get("CONFER_NUM"),
@@ -236,11 +255,40 @@ class PDFUrlLoader(BaseLoader):
             result = self._execute_query(query, params)
             if result is not None:
                 logger.debug(f"Query result: {result}")
-            logger.success(
+            logger.debug(
                 f"✅ PDF URL 저장 성공: {pdf_url_data.get('date')} - {pdf_url_data.get('sub_name')}"
             )
+
+            if self.run_id:
+                action = "inserted" if result else "skipped"
+                self.log_load_row_event(
+                    target_table="pdf_url",
+                    record_key=(
+                        f"{pdf_url_data.get('CONF_DATE')}:"
+                        f"{pdf_url_data.get('TITLE')}:"
+                        f"{pdf_url_data.get('PDF_LINK_URL')}"
+                    ),
+                    action=action,
+                    source_date=pdf_url_data.get("CONF_DATE"),
+                    meta={
+                        "class_name": pdf_url_data.get("CLASS_NAME"),
+                        "confer_number": pdf_url_data.get("CONFER_NUM"),
+                    },
+                )
         except Exception as e:
             logger.error(f"❌ PDF URL 저장 중 오류 발생: {str(e)}")
+            if self.run_id:
+                self.log_load_row_event(
+                    target_table="pdf_url",
+                    record_key=(
+                        f"{pdf_url_data.get('CONF_DATE')}:"
+                        f"{pdf_url_data.get('TITLE')}:"
+                        f"{pdf_url_data.get('PDF_LINK_URL')}"
+                    ),
+                    action="failed",
+                    source_date=pdf_url_data.get("CONF_DATE"),
+                    meta={"error": str(e)},
+                )
             raise
 
 
@@ -275,6 +323,7 @@ class ScheduleToPDFPipeline(BasePipeline):
         )
         self.pdf_transformer = PDFUrlTransformer()
         self.loader = PDFUrlLoader(self.connection)
+        self.run_id: Optional[str] = None
 
     def run(self):
         """일정 수집부터 PDF URL 저장까지 실행합니다.
@@ -282,50 +331,72 @@ class ScheduleToPDFPipeline(BasePipeline):
         Returns:
             저장을 시도한 PDF URL 데이터 개수입니다.
         """
-        # Step 1: 일정 추출
-        logger.info("✅ 일정 extractor 시작")
-        schedule_data = self.schedule_extractor.extract()
-        logger.info("✅ 일정 데이터 추출 완료")
+        self.start_monitoring(
+            pipeline_name="ScheduleToPDFPipeline",
+            meta={
+                "incremental": self.incremental,
+                "days_back": self.days_back,
+                "unit_cd": self.pdf_extractor.unit_cd,
+                "page_size": self.pdf_extractor.page_size,
+                "max_pages": self.pdf_extractor.max_pages,
+            },
+        )
+        self.loader.run_id = self.run_id
 
-        # Step 2: 날짜 리스트 생성
-        all_meeting_dates = self.schedule_transformer.transform(schedule_data)
-        logger.info(f"✅ 전체 날짜 리스트: {len(all_meeting_dates)}건")
+        try:
+            # Step 1: 일정 추출
+            logger.info(f"✅ 일정 extractor 시작 (run_id={self.run_id})")
+            schedule_data = self.schedule_extractor.extract()
+            logger.info("✅ 일정 데이터 추출 완료")
 
-        # Step 2.5: 증분 필터링
-        if self.incremental:
-            existing_dates = get_existing_pdf_dates(self.connection)
-            meeting_dates = filter_new_dates(all_meeting_dates, existing_dates)
+            # Step 2: 날짜 리스트 생성
+            all_meeting_dates = self.schedule_transformer.transform(schedule_data)
+            logger.info(f"✅ 전체 날짜 리스트: {len(all_meeting_dates)}건")
 
-            if not meeting_dates:
-                logger.info("✅ 신규 날짜가 없습니다. 건너뜁니다.")
-                return 0
-        else:
             meeting_dates = all_meeting_dates
 
-        # Step 2.6: 최근 N일 필터 적용
-        if self.days_back:
-            cutoff = get_date_range_filter(self.days_back)
-            meeting_dates = [d for d in meeting_dates if d >= cutoff]
-            logger.info(f"✅ 최근 {self.days_back}일 필터 적용: {len(meeting_dates)}건")
+            # Step 2.5: 최근 N일 필터 적용
+            if self.days_back:
+                cutoff = get_date_range_filter(self.days_back)
+                meeting_dates = [d for d in meeting_dates if d >= cutoff]
+                logger.info(f"✅ 최근 {self.days_back}일 필터 적용: {len(meeting_dates)}건")
 
-            if not meeting_dates:
-                logger.info("✅ 필터 후 처리할 날짜가 없습니다.")
+                if not meeting_dates:
+                    logger.info("✅ 필터 후 처리할 날짜가 없습니다.")
+                    self.finish_monitoring(status="success")
+                    return 0
+
+            # Step 3: PDF URL 추출
+            self.pdf_extractor.meeting_dates = meeting_dates
+            logger.info("✅ PDF extractor 시작")
+            pdf_data, fetched_dates = self.pdf_extractor.extract()
+            logger.info(f"✅ PDF 데이터 추출 완료 ({len(pdf_data)}건)")
+
+            # Step 4: 변환
+            if self.incremental:
+                self.pdf_transformer.existing_pdf_urls = get_existing_pdf_urls(
+                    self.connection
+                )
+            transformed_pdf_data = self.pdf_transformer.transform(pdf_data)
+            logger.info(f"✅ PDF 데이터 변환 완료 ({len(transformed_pdf_data)}건)")
+
+            if not transformed_pdf_data:
+                logger.info("✅ 신규 PDF URL이 없습니다. 건너뜁니다.")
+                self.finish_monitoring(status="success")
                 return 0
 
-        # Step 3: PDF URL 추출
-        self.pdf_extractor.meeting_dates = meeting_dates
-        logger.info("✅ PDF extractor 시작")
-        pdf_data, fetched_dates = self.pdf_extractor.extract()
-        logger.info(f"✅ PDF 데이터 추출 완료 ({len(pdf_data)}건)")
+            # Step 5: DB 저장
+            self.loader.create_table()
+            for item in tqdm(
+                transformed_pdf_data,
+                desc="PDF URL DB 저장",
+                unit="row",
+            ):
+                self.loader.load(item)
 
-        # Step 4: 변환
-        transformed_pdf_data = self.pdf_transformer.transform(pdf_data)
-        logger.info(f"✅ PDF 데이터 변환 완료 ({len(transformed_pdf_data)}건)")
-
-        # Step 5: DB 저장
-        self.loader.create_table()
-        for item in transformed_pdf_data:
-            self.loader.load(item)
-
-        logger.info("✅ PostgreSQL 저장 완료")
-        return len(transformed_pdf_data)
+            logger.info("✅ PostgreSQL 저장 완료")
+            self.finish_monitoring(status="success")
+            return len(transformed_pdf_data)
+        except Exception as exc:
+            self.finish_monitoring(status="failed", error_message=str(exc))
+            raise
