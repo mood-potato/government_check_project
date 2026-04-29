@@ -185,6 +185,9 @@ llm_study
 archive
 key_changes.json
 
+# Generated or source data with person-level records
+data/18대-22대 국회의원 기본정보 - 정보.csv
+
 # for mac
 .DS_Store
 ._.DS_Store

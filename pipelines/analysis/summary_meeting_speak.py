@@ -15,7 +15,7 @@ def create_client() -> OpenAI:
 def summarize_prompt(prompt: str = DEFAULT_PROMPT, client: OpenAI | None = None) -> str:
     openai_client = client or create_client()
     completion = openai_client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5.4-mini",
         messages=[{"role": "user", "content": prompt}],
     )
     return completion.choices[0].message.content

@@ -3,11 +3,18 @@ from typing import Any
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 
+from backend.api.services.home_service import HomeService
 from backend.api.services.meeting_service import MeetingService
 from backend.api.services.speaker_service import SpeakerService
 from backend.api.dependencies import get_search_service
 
 router = APIRouter()
+
+
+@router.get("/home")
+async def get_home() -> dict[str, Any]:
+    """API: Get home page data"""
+    return HomeService.get_home()
 
 
 @router.get("/stats")

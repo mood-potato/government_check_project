@@ -753,6 +753,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "sentence-transformers" },
+    { name = "tqdm" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -776,6 +777,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "sentence-transformers", specifier = ">=5.0.0" },
+    { name = "tqdm", specifier = ">=4.67.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.0" },
 ]
 

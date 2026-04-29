@@ -24,10 +24,10 @@ def test_analysis_modules_do_not_call_external_services_on_import(monkeypatch):
     monkeypatch.setattr("openai.OpenAI", OpenAIImportGuard)
 
     module_names = [
-        "backend.modules.analysis.get_all_speark",
-        "backend.modules.analysis.get_api_module",
-        "backend.modules.analysis.query_speak",
-        "backend.modules.analysis.summary_meeting_speak",
+        "pipelines.analysis.get_all_speark",
+        "pipelines.analysis.get_api_module",
+        "pipelines.analysis.query_speak",
+        "pipelines.analysis.summary_meeting_speak",
     ]
 
     for module_name in module_names:
