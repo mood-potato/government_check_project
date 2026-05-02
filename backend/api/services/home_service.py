@@ -18,7 +18,8 @@ class HomeService:
                 assembly_number,
                 name,
                 political_party,
-                election_district
+                election_district,
+                profile_image_url
             FROM speakers
             WHERE assembly_number = (SELECT MAX(assembly_number) FROM speakers)
             ORDER BY name
@@ -40,7 +41,7 @@ class HomeService:
                         "name": row["name"],
                         "party_name": row["political_party"],
                         "district_name": row["election_district"],
-                        "profile_image_url": None,
+                        "profile_image_url": row["profile_image_url"],
                     },
                     "summary": _speaker_summary(row),
                 }

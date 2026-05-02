@@ -1,7 +1,10 @@
 import re
+import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
+from xml.etree import ElementTree
 
 from loguru import logger
 from tqdm import tqdm
@@ -17,6 +20,22 @@ from pipelines.utils.openapi import (
 
 ORDERED_BILL_NAME_PATTERN = re.compile(r"^\s*(\d+)\.\s*(.+)$")
 NUMBER_PATTERN = re.compile(r"(\d+)")
+CELL_COLUMN_PATTERN = re.compile(r"([A-Z]+)")
+SPREADSHEET_NS = {"main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+RELATIONSHIP_NS = {
+    "rel": "http://schemas.openxmlformats.org/package/2006/relationships"
+}
+BILL_URL_WORKBOOK_HEADER_MAP = {
+    "의안 ID": "BILL_ID",
+    "의안명": "BILL_NM",
+    "회의 종류": "CONF_KND",
+    "회의 ID": "CONF_ID",
+    "대수": "ERACO",
+    "회기": "SESS",
+    "차수": "DGR",
+    "회의일자": "CONF_DT",
+    "다운URL": "DOWN_URL",
+}
 
 
 def parse_korean_number(value: Optional[str]) -> Optional[int]:
@@ -69,6 +88,48 @@ def format_openapi_date(value: Optional[str]) -> Optional[str]:
         return None
 
     return datetime.strptime(value, "%Y%m%d").date().isoformat()
+
+
+def get_cell_column(cell_reference: str) -> str:
+    """셀 주소에서 컬럼 문자를 추출합니다.
+
+    Args:
+        cell_reference: A1, BC12 같은 엑셀 셀 주소입니다.
+
+    Returns:
+        컬럼 문자입니다. 주소가 비어 있으면 빈 문자열을 반환합니다.
+    """
+    match = CELL_COLUMN_PATTERN.match(cell_reference or "")
+    if not match:
+        return ""
+    return match.group(1)
+
+
+def read_cell_text(cell, shared_strings: List[str]) -> str:
+    """워크시트 XML 셀 값을 문자열로 읽습니다.
+
+    Args:
+        cell: Open XML 셀 Element입니다.
+        shared_strings: sharedStrings.xml에서 읽은 문자열 목록입니다.
+
+    Returns:
+        셀의 표시 문자열입니다. 값이 없으면 빈 문자열을 반환합니다.
+    """
+    cell_type = cell.attrib.get("t")
+    if cell_type == "inlineStr":
+        texts = cell.findall(".//main:t", SPREADSHEET_NS)
+        return "".join(text.text or "" for text in texts).strip()
+
+    value = cell.find("main:v", SPREADSHEET_NS)
+    if value is None or value.text is None:
+        return ""
+
+    if cell_type == "s":
+        index = int(value.text)
+        if 0 <= index < len(shared_strings):
+            return shared_strings[index].strip()
+
+    return value.text.strip()
 
 
 # ======== BillInfoETL===========
@@ -412,6 +473,137 @@ class BillUrlExtractor(BaseExtractor):
         return all_rows
 
 
+class BillUrlWorkbookExtractor(BaseExtractor):
+    """엑셀 파일에서 의안별 회의록 PDF 정보를 수집합니다.
+
+    Args:
+        workbook_path: `데이터_의안별 회의록 목록.xlsx` 파일 경로입니다.
+        sheet_name: 읽을 시트명입니다. 지정하지 않으면 첫 번째 시트를 읽습니다.
+    """
+
+    def __init__(
+        self,
+        workbook_path: str | Path,
+        sheet_name: Optional[str] = "의안별 회의록 목록",
+    ):
+        self.workbook_path = Path(workbook_path)
+        self.sheet_name = sheet_name
+
+    def extract(self) -> List[dict]:
+        """엑셀 파일의 의안별 회의록 목록을 API 응답 형식으로 읽습니다.
+
+        Returns:
+            `BillUrlTransformer`가 처리할 수 있는 원본 row 딕셔너리 목록입니다.
+
+        Raises:
+            FileNotFoundError: 엑셀 파일이 없을 때 발생합니다.
+            ValueError: 필수 컬럼을 찾을 수 없을 때 발생합니다.
+        """
+        if not self.workbook_path.exists():
+            raise FileNotFoundError(f"엑셀 파일을 찾을 수 없습니다: {self.workbook_path}")
+
+        self.log_info(f"의안별 회의록 엑셀 파일을 읽습니다: {self.workbook_path}")
+        with zipfile.ZipFile(self.workbook_path) as workbook:
+            shared_strings = self._read_shared_strings(workbook)
+            worksheet_path = self._find_worksheet_path(workbook)
+            rows = self._read_worksheet_rows(workbook, worksheet_path, shared_strings)
+
+        if not rows:
+            return []
+
+        headers = rows[0]
+        column_map = self._build_column_map(headers)
+        transformed_rows = []
+        for row in rows[1:]:
+            item = {}
+            for column, api_key in column_map.items():
+                item[api_key] = row.get(column, "")
+            if item.get("BILL_ID") and item.get("DOWN_URL"):
+                transformed_rows.append(item)
+
+        self.log_info(f"의안별 회의록 엑셀 데이터 로드 완료: 총 {len(transformed_rows)}개")
+        return transformed_rows
+
+    def _read_shared_strings(self, workbook: zipfile.ZipFile) -> List[str]:
+        if "xl/sharedStrings.xml" not in workbook.namelist():
+            return []
+
+        root = ElementTree.fromstring(workbook.read("xl/sharedStrings.xml"))
+        shared_strings = []
+        for item in root.findall("main:si", SPREADSHEET_NS):
+            texts = item.findall(".//main:t", SPREADSHEET_NS)
+            shared_strings.append("".join(text.text or "" for text in texts))
+        return shared_strings
+
+    def _find_worksheet_path(self, workbook: zipfile.ZipFile) -> str:
+        workbook_root = ElementTree.fromstring(workbook.read("xl/workbook.xml"))
+        sheet_relationship_id = None
+        first_relationship_id = None
+        for sheet in workbook_root.findall("main:sheets/main:sheet", SPREADSHEET_NS):
+            relationship_id = sheet.attrib.get(
+                "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+            )
+            if first_relationship_id is None:
+                first_relationship_id = relationship_id
+            if self.sheet_name and sheet.attrib.get("name") == self.sheet_name:
+                sheet_relationship_id = relationship_id
+                break
+
+        if sheet_relationship_id is None:
+            sheet_relationship_id = first_relationship_id
+        if not sheet_relationship_id:
+            raise ValueError("엑셀 파일에서 워크시트를 찾을 수 없습니다.")
+
+        relationships_root = ElementTree.fromstring(
+            workbook.read("xl/_rels/workbook.xml.rels")
+        )
+        for relationship in relationships_root.findall("rel:Relationship", RELATIONSHIP_NS):
+            if relationship.attrib.get("Id") == sheet_relationship_id:
+                target = relationship.attrib["Target"].lstrip("/")
+                if target.startswith("xl/"):
+                    return target
+                return f"xl/{target}"
+
+        raise ValueError("엑셀 파일에서 워크시트 관계 정보를 찾을 수 없습니다.")
+
+    def _read_worksheet_rows(
+        self,
+        workbook: zipfile.ZipFile,
+        worksheet_path: str,
+        shared_strings: List[str],
+    ) -> List[Dict[str, str]]:
+        rows = []
+        for _, row_element in ElementTree.iterparse(workbook.open(worksheet_path)):
+            if not row_element.tag.endswith("row"):
+                continue
+
+            row_values = {}
+            for cell in row_element.findall("main:c", SPREADSHEET_NS):
+                column = get_cell_column(cell.attrib.get("r", ""))
+                row_values[column] = read_cell_text(cell, shared_strings)
+            if row_values:
+                rows.append(row_values)
+            row_element.clear()
+        return rows
+
+    def _build_column_map(self, headers: Dict[str, str]) -> Dict[str, str]:
+        column_map = {}
+        missing_headers = {"의안 ID", "의안명", "회의 종류", "회의 ID", "대수", "회의일자", "다운URL"}
+        for column, header in headers.items():
+            api_key = BILL_URL_WORKBOOK_HEADER_MAP.get(header)
+            if not api_key:
+                continue
+
+            column_map[column] = api_key
+            missing_headers.discard(header)
+
+        if missing_headers:
+            missing_text = ", ".join(sorted(missing_headers))
+            raise ValueError(f"의안별 회의록 엑셀 필수 컬럼이 없습니다: {missing_text}")
+
+        return column_map
+
+
 class BillUrlTransformer(BaseTransformer):
     """안건 회의록 API 응답을 bill_url 저장 형식으로 변환합니다."""
 
@@ -585,18 +777,23 @@ class BillUrlPipeline(BasePipeline):
     """의안별 회의록 목록을 바탕으로 PDF URL을 수집해 DB에 저장합니다.
 
     Args:
+        bill_url_workbook_path: 지정하면 Open API 대신 엑셀 파일에서 bill_url row를 읽습니다.
     """
 
     def __init__(
         self,
-        bill_url_page_size=100,
-        bill_url_max_pages=10,
-        bill_url_max_workers=5,
+        bill_url_page_size=10,
+        bill_url_max_pages=3,
+        bill_url_max_workers=3,
+        bill_url_workbook_path: Optional[str | Path] = None,
     ):
         self.connection = get_postgres_connection()
         self.bill_url_page_size = bill_url_page_size
         self.bill_url_max_pages = bill_url_max_pages
         self.bill_url_max_workers = bill_url_max_workers
+        self.bill_url_workbook_path = (
+            Path(bill_url_workbook_path) if bill_url_workbook_path else None
+        )
 
         self.transformer = BillUrlTransformer()
         self.loader = BillUrlLoader(self.connection)
@@ -609,22 +806,31 @@ class BillUrlPipeline(BasePipeline):
                 "bill_url_page_size": self.bill_url_page_size,
                 "bill_url_max_pages": self.bill_url_max_pages,
                 "bill_url_max_workers": self.bill_url_max_workers,
+                "bill_url_workbook_path": (
+                    str(self.bill_url_workbook_path)
+                    if self.bill_url_workbook_path
+                    else None
+                ),
             },
         )
         self.loader.run_id = self.run_id
 
         try:
-            self.log_info("수집해야할 안건 회의록 개수 확인")
-            bill_ids_list = self.loader.fetch_pending_bill_ids()
+            if self.bill_url_workbook_path:
+                self.log_info("엑셀 파일에서 안건 회의록 URL 수집 시작")
+                self.extractor = BillUrlWorkbookExtractor(self.bill_url_workbook_path)
+            else:
+                self.log_info("수집해야할 안건 회의록 개수 확인")
+                bill_ids_list = self.loader.fetch_pending_bill_ids()
 
-            self.log_info(f"안건 회의록 수집 시작: {len(bill_ids_list)}개 안건")
-            self.extractor = BillUrlExtractor(
-                url=CONGRESS_BILL_CONF_LIST_URL,
-                bill_ids=bill_ids_list,
-                page_size=self.bill_url_page_size,
-                max_pages=self.bill_url_max_pages,
-                max_workers=self.bill_url_max_workers,
-            )
+                self.log_info(f"안건 회의록 수집 시작: {len(bill_ids_list)}개 안건")
+                self.extractor = BillUrlExtractor(
+                    url=CONGRESS_BILL_CONF_LIST_URL,
+                    bill_ids=bill_ids_list,
+                    page_size=self.bill_url_page_size,
+                    max_pages=self.bill_url_max_pages,
+                    max_workers=self.bill_url_max_workers,
+                )
             raw_bill_urls = self.extractor.extract()
 
             self.log_info(f"안건 회의록 전환 시작: {len(raw_bill_urls)}건")

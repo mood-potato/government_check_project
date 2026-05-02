@@ -4,7 +4,9 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
+
+from pipelines.utils.db import get_postgres_connection
 
 
 @dataclass(frozen=True)
@@ -20,8 +22,9 @@ class SpeakerSeedRow:
     birth_date: str | None
 
 
-DEFAULT_CSV_PATH = Path("data") / "18대-22대 국회의원 기본정보 - 정보.csv"
+DEFAULT_CSV_PATH = Path("data") / "국회의원정보통합API.csv"
 DEFAULT_OUTPUT_PATH = Path("supabase") / "seed.sql"
+CSV_ENCODINGS = ("utf-8-sig", "cp949")
 
 INSERT_COLUMNS = (
     "mona_code",
@@ -35,11 +38,38 @@ INSERT_COLUMNS = (
     "birth_date",
 )
 
+UPSERT_SPEAKER_SQL = """
+INSERT INTO speakers (
+    mona_code,
+    assembly_number,
+    name,
+    political_party,
+    election_district,
+    election_type,
+    reelection_count,
+    gender,
+    birth_date
+) VALUES (
+    %s, %s, %s, %s, %s, %s, %s, %s, %s
+)
+ON CONFLICT (mona_code, assembly_number) DO UPDATE SET
+    name = EXCLUDED.name,
+    political_party = EXCLUDED.political_party,
+    election_district = EXCLUDED.election_district,
+    election_type = EXCLUDED.election_type,
+    reelection_count = EXCLUDED.reelection_count,
+    gender = EXCLUDED.gender,
+    birth_date = EXCLUDED.birth_date,
+    updated_at = now();
+"""
+
 
 def _clean(value: str | None) -> str | None:
     if value is None:
         return None
     cleaned = value.strip()
+    if cleaned.lower() == "null":
+        return None
     return cleaned or None
 
 
@@ -72,15 +102,80 @@ def parse_reelection_count(value: str) -> int | None:
     return None
 
 
-def row_to_speaker(row: dict[str, str]) -> SpeakerSeedRow:
+def parse_assembly_numbers(value: str) -> list[int]:
+    """당선대수 문자열에서 국회 대수 목록을 추출합니다.
+
+    Args:
+        value: "제9대, 제10대"처럼 국회 대수를 나타내는 문자열입니다.
+
+    Returns:
+        추출한 국회 대수 목록입니다.
+
+    Raises:
+        ValueError: 문자열에서 국회 대수를 찾지 못한 경우입니다.
+    """
+    if _clean(value) == "제헌":
+        return [1]
+
+    numbers = [int(match) for match in re.findall(r"\d+", value)]
+    if not numbers:
+        raise ValueError(f"assembly number not found: {value}")
+    return numbers
+
+
+def _is_integrated_api_row(row: dict[str, str]) -> bool:
+    return "국회의원코드" in row
+
+
+def _optional_iso_date(value: str | None) -> str | None:
+    cleaned = _clean(value)
+    if cleaned is None:
+        return None
+    try:
+        date.fromisoformat(cleaned)
+    except ValueError:
+        return None
+    return cleaned
+
+
+def _row_to_speaker(row: dict[str, str], assembly_number: int) -> SpeakerSeedRow:
+    election_type = _clean(row.get("선거구구분명"))
+    election_district = _clean(row.get("선거구명"))
+    if election_type == "비례대표":
+        election_district = None
+
+    birth_date = _optional_iso_date(row.get("생일일자"))
+
+    return SpeakerSeedRow(
+        mona_code=_required(row, "국회의원코드"),
+        assembly_number=assembly_number,
+        name=_required(row, "국회의원명"),
+        political_party=_required(row, "정당명"),
+        election_district=election_district,
+        election_type=election_type,
+        reelection_count=parse_reelection_count(row.get("재선구분명", "")),
+        gender=_clean(row.get("성별")),
+        birth_date=birth_date,
+    )
+
+
+def row_to_speaker(
+    row: dict[str, str], assembly_number: int | None = None
+) -> SpeakerSeedRow:
     """CSV row를 의원 seed row로 변환합니다.
 
     Args:
         row: 국회의원 기본정보 CSV row입니다.
+        assembly_number: 통합 API row의 특정 당선대수입니다.
 
     Returns:
         Supabase seed SQL 생성에 사용할 의원 데이터입니다.
     """
+    if _is_integrated_api_row(row):
+        if assembly_number is None:
+            assembly_number = max(parse_assembly_numbers(_required(row, "당선대수")))
+        return _row_to_speaker(row, assembly_number)
+
     election_type = _clean(row.get("당선구분"))
     election_district = _clean(row.get("선거구"))
     if election_type == "비례대표":
@@ -134,6 +229,63 @@ def _speaker_values(speaker: SpeakerSeedRow) -> str:
     return "(" + ", ".join(values) + ")"
 
 
+def _speaker_params(speaker: SpeakerSeedRow) -> tuple[Any, ...]:
+    """의원 row를 DB upsert 파라미터로 변환합니다.
+
+    Args:
+        speaker: 저장할 의원 row입니다.
+
+    Returns:
+        `speakers` upsert 쿼리에 전달할 파라미터입니다.
+    """
+    return (
+        speaker.mona_code,
+        speaker.assembly_number,
+        speaker.name,
+        speaker.political_party,
+        speaker.election_district,
+        speaker.election_type,
+        speaker.reelection_count,
+        speaker.gender,
+        speaker.birth_date,
+    )
+
+
+class SpeakerDatabaseLoader:
+    """의원 기본정보를 `speakers` 테이블에 저장합니다."""
+
+    def __init__(self, connection: Any) -> None:
+        """DB 연결을 저장합니다.
+
+        Args:
+            connection: psycopg2 호환 DB 연결 객체입니다.
+        """
+        self.connection = connection
+
+    def load(self, speakers: Iterable[SpeakerSeedRow]) -> int:
+        """의원 row 목록을 `speakers` 테이블에 upsert합니다.
+
+        Args:
+            speakers: 저장할 의원 row 목록입니다.
+
+        Returns:
+            저장을 시도한 의원 row 수입니다.
+
+        Raises:
+            Exception: DB 저장에 실패하면 rollback 후 원 예외를 다시 발생시킵니다.
+        """
+        rows = list(speakers)
+        try:
+            with self.connection.cursor() as cursor:
+                for speaker in rows:
+                    cursor.execute(UPSERT_SPEAKER_SQL, _speaker_params(speaker))
+            self.connection.commit()
+            return len(rows)
+        except Exception:
+            self.connection.rollback()
+            raise
+
+
 def build_seed_sql(speakers: Iterable[SpeakerSeedRow]) -> str:
     """의원 seed row 목록을 Supabase seed SQL로 변환합니다.
 
@@ -169,10 +321,45 @@ ON CONFLICT (mona_code, assembly_number) DO UPDATE SET
 """
 
 
+def _read_csv_rows(path: Path) -> list[dict[str, str]]:
+    """CSV 파일을 지원 인코딩으로 읽습니다."""
+    last_error: UnicodeDecodeError | None = None
+    for encoding in CSV_ENCODINGS:
+        try:
+            with path.open(encoding=encoding, newline="") as csv_file:
+                return list(csv.DictReader(csv_file))
+        except UnicodeDecodeError as error:
+            last_error = error
+
+    if last_error is not None:
+        raise last_error
+    return []
+
+
 def load_speakers_from_csv(path: Path) -> list[SpeakerSeedRow]:
     """CSV 파일에서 의원 seed row를 읽습니다."""
-    with path.open(encoding="utf-8-sig", newline="") as csv_file:
-        return [row_to_speaker(row) for row in csv.DictReader(csv_file)]
+    speakers = []
+    seen_keys = set()
+    for row in _read_csv_rows(path):
+        if _is_integrated_api_row(row):
+            assembly_numbers_text = _clean(row.get("당선대수"))
+            if assembly_numbers_text is None:
+                continue
+            for assembly_number in parse_assembly_numbers(assembly_numbers_text):
+                speaker = row_to_speaker(row, assembly_number)
+                key = (speaker.mona_code, speaker.assembly_number)
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                speakers.append(speaker)
+            continue
+        speaker = row_to_speaker(row)
+        key = (speaker.mona_code, speaker.assembly_number)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        speakers.append(speaker)
+    return speakers
 
 
 def write_seed_sql(csv_path: Path, output_path: Path) -> int:
@@ -186,7 +373,9 @@ def write_seed_sql(csv_path: Path, output_path: Path) -> int:
         SQL로 쓴 의원 row 수입니다.
     """
     speakers = load_speakers_from_csv(csv_path)
-    unique_keys = {(speaker.mona_code, speaker.assembly_number) for speaker in speakers}
+    unique_keys = {
+        (speaker.mona_code, speaker.assembly_number) for speaker in speakers
+    }
     if len(unique_keys) != len(speakers):
         raise ValueError("duplicate (mona_code, assembly_number) keys found in CSV")
 
@@ -195,16 +384,42 @@ def write_seed_sql(csv_path: Path, output_path: Path) -> int:
     return len(speakers)
 
 
+def load_speakers_to_database(csv_path: Path = DEFAULT_CSV_PATH) -> int:
+    """CSV 파일의 의원 기본정보를 `speakers` 테이블에 저장합니다.
+
+    Args:
+        csv_path: 국회의원 기본정보 CSV 경로입니다.
+
+    Returns:
+        저장을 시도한 의원 row 수입니다.
+    """
+    speakers = load_speakers_from_csv(csv_path)
+    connection = get_postgres_connection()
+    try:
+        return SpeakerDatabaseLoader(connection).load(speakers)
+    finally:
+        connection.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate Supabase seed SQL for speakers."
     )
     parser.add_argument("--csv", type=Path, default=DEFAULT_CSV_PATH)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_PATH)
+    parser.add_argument(
+        "--load-db",
+        action="store_true",
+        help="Load CSV rows directly into the speakers table.",
+    )
     args = parser.parse_args()
 
-    count = write_seed_sql(args.csv, args.output)
-    print(f"Wrote {count} speakers to {args.output}")
+    if args.load_db:
+        count = load_speakers_to_database(args.csv)
+        print(f"Loaded {count} speakers to database")
+    else:
+        count = write_seed_sql(args.csv, args.output)
+        print(f"Wrote {count} speakers to {args.output}")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ def test_home_service_maps_speakers_to_featured_members(monkeypatch):
             "name": "강테스트",
             "political_party": "테스트당",
             "election_district": "서울 테스트구",
+            "profile_image_url": "https://open.assembly.go.kr/photo.jpg",
         },
         {
             "id": "22222222-2222-2222-2222-222222222222",
@@ -18,6 +19,7 @@ def test_home_service_maps_speakers_to_featured_members(monkeypatch):
             "name": "비례테스트",
             "political_party": "예시당",
             "election_district": None,
+            "profile_image_url": None,
         },
     ]
 
@@ -40,7 +42,7 @@ def test_home_service_maps_speakers_to_featured_members(monkeypatch):
                 "name": "강테스트",
                 "party_name": "테스트당",
                 "district_name": "서울 테스트구",
-                "profile_image_url": None,
+                "profile_image_url": "https://open.assembly.go.kr/photo.jpg",
             },
             "summary": "22대 테스트당 서울 테스트구",
         },

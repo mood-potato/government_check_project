@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS  speakers (
     reelection_count INT,                   -- "4선" → 4
     gender           TEXT,
     birth_date       DATE,
+    profile_image_url TEXT,
+    profile_image_source TEXT,
+    profile_image_license TEXT,
+    profile_image_updated_at TIMESTAMPTZ,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
 

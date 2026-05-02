@@ -1,6 +1,7 @@
 from pipelines.bill_collection_pipeline import (
     BillInfoLoader,
     BillInfoTransformer,
+    BillUrlWorkbookExtractor,
     BillUrlLoader,
     BillUrlTransformer,
 )
@@ -94,6 +95,65 @@ def test_bill_url_transformer_normalizes_bill_conference_rows():
             "meeting_date": "2026-04-09",
             "download_url": "https://record.assembly.go.kr/assembly/viewer/minutes/download/pdf.do?id=56533",
             "get_pdf": False,
+        }
+    ]
+
+
+def test_bill_url_workbook_extractor_reads_korean_header_xlsx(tmp_path):
+    import zipfile
+
+    workbook_path = tmp_path / "bill_url.xlsx"
+    worksheet_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>
+    <row r="1">
+      <c r="A1" t="inlineStr"><is><t>의안 ID</t></is></c>
+      <c r="B1" t="inlineStr"><is><t>의안명</t></is></c>
+      <c r="C1" t="inlineStr"><is><t>회의 종류</t></is></c>
+      <c r="D1" t="inlineStr"><is><t>회의 ID</t></is></c>
+      <c r="E1" t="inlineStr"><is><t>대수</t></is></c>
+      <c r="F1" t="inlineStr"><is><t>회의일자</t></is></c>
+      <c r="G1" t="inlineStr"><is><t>다운URL</t></is></c>
+    </row>
+    <row r="2">
+      <c r="A2" t="inlineStr"><is><t>PRC_SAMPLE</t></is></c>
+      <c r="B2" t="inlineStr"><is><t>1. 샘플 법률안</t></is></c>
+      <c r="C2" t="inlineStr"><is><t>국회본회의 회의록</t></is></c>
+      <c r="D2" t="inlineStr"><is><t>N054223</t></is></c>
+      <c r="E2" t="inlineStr"><is><t>제22대</t></is></c>
+      <c r="F2" t="inlineStr"><is><t xml:space="preserve">20260423        </t></is></c>
+      <c r="G2" t="inlineStr"><is><t>https://example.com/a.pdf</t></is></c>
+    </row>
+  </sheetData>
+</worksheet>
+"""
+    workbook_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="의안별 회의록 목록" r:id="rId1" sheetId="1"/></sheets>
+</workbook>
+"""
+    rels_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>
+"""
+    with zipfile.ZipFile(workbook_path, "w") as archive:
+        archive.writestr("xl/workbook.xml", workbook_xml)
+        archive.writestr("xl/_rels/workbook.xml.rels", rels_xml)
+        archive.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
+
+    rows = BillUrlWorkbookExtractor(workbook_path).extract()
+
+    assert rows == [
+        {
+            "BILL_ID": "PRC_SAMPLE",
+            "BILL_NM": "1. 샘플 법률안",
+            "CONF_KND": "국회본회의 회의록",
+            "CONF_ID": "N054223",
+            "ERACO": "제22대",
+            "CONF_DT": "20260423",
+            "DOWN_URL": "https://example.com/a.pdf",
         }
     ]
 
