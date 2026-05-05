@@ -752,11 +752,17 @@ class PDFToSpeechPipeline(BasePipeline):
 
     def run(self):
         """PDF 추출, 발언 변환, DB 저장을 순서대로 실행합니다."""
-        logger.info("✅ 병렬로 PDF 추출 시작")
-        raw_data = self.extractor.extract()
-        logger.info(f"✅ 처리 완료: 총 {len(raw_data)}건")
+        logger.info("✅ PDF 단위 추출 시작")
+        rows = self.extractor.fetch_pdf_urls()
+        logger.info(f"✅ 처리 대상 PDF: 총 {len(rows)}건")
 
-        for item in raw_data:
+        for row in rows:
+            try:
+                item = self.extractor.extract_one(row)
+            except Exception as e:
+                logger.error(f"❌ PDF 추출 중 오류 발생: {e}")
+                continue
+
             logger.info(f"\n{item['title']} ({item['date']})")
 
             transformed_result = self.transformer.transform(
@@ -801,13 +807,19 @@ class BillURLToSpeechPipeline(BasePipeline):
 
     def run(self):
         """bill_url PDF 추출, 발언 변환, DB 저장을 순서대로 실행합니다."""
-        logger.info("✅ bill_url PDF 추출 시작")
-        raw_data = self.extractor.extract()
-        logger.info(f"✅ bill_url 처리 완료: 총 {len(raw_data)}건")
+        logger.info("✅ bill_url PDF 단위 추출 시작")
+        rows = self.extractor.fetch_bill_urls()
+        logger.info(f"✅ bill_url 처리 대상: 총 {len(rows)}건")
 
         self.loader.create_table()
 
-        for item in raw_data:
+        for row in rows:
+            try:
+                item = self.extractor.extract_one(row)
+            except Exception as e:
+                logger.error(f"❌ bill_url PDF 추출 중 오류 발생: {e}")
+                continue
+
             logger.info(f"\n{item['title']} ({item['date']})")
 
             transformed_result = self.transformer.transform(
