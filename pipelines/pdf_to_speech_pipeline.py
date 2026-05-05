@@ -34,19 +34,40 @@ NON_SPEECH_KEYWORDS = [
     "통지",
     "집회",
     "본회의장 의석",
+    "출석 위원",
+    "출석 전문위원",
+    "정부측 및 기타 참석자",
+    "법원측 참석자",
+    "출석 진술인",
 ]
 
 APPENDIX_MARKERS = [
     "◯출석 의원",
+    "◯출석 위원",
+    "◯출석 전문위원",
+    "◯정부측 및 기타 참석자",
+    "◯법원측 참석자",
+    "◯출석 진술인",
     "◯본회의장 의석",
     "◯개의 시",
     "◯산회 선포",
 ]
 
 KNOWN_TITLES_PATTERN = re.compile(
-    r"^(의장|부의장|의사국장|감사원장|국무총리|[가-힣]+부\s*총리"
+    r"^(의장|부의장|의사국장|감사원장|국무총리|진술인|수석전문위원|전문위원"
+    r"|[가-힣]+부\s*총리"
     r"|[가-힣]+부?\s*장관|[가-힣]*위원장(?:대리)?|위원|(?:[가-힣]+ )*의원"
     r"|[가-힣]+처장|[가-힣]+청장|국무위원)\s+"
+)
+
+SPEAKER_HEADER_PATTERN = re.compile(
+    r"^◯(?P<speaker>"
+    r"(?:[가-힣]{2,5}\s+(?:위원|의원|장관|차관|처장|청장|실장|교수|변호사))"
+    r"|(?:(?:의장|부의장|의사국장|감사원장|국무총리|진술인|수석전문위원|전문위원"
+    r"|[가-힣]+부\s*총리|[가-힣]+부?\s*장관|[가-힣]*위원장(?:대리)?|위원"
+    r"|(?:[가-힣]+ )*의원|[가-힣]+처장|[가-힣]+청장|국무위원)\s+[가-힣]{2,5})"
+    r")\s*(?P<speech>[\s\S]*?)(?=^◯|\Z)",
+    re.MULTILINE,
 )
 
 
@@ -164,9 +185,7 @@ class PDFToSpeechTransformer(BaseTransformer):
     """국회 회의록 PDF 텍스트를 발언 단위 데이터로 변환합니다."""
 
     def __init__(self, enable_summary: bool = False):
-        self.speaker_pattern = re.compile(
-            r"◯([\w]+ [\w]+)\s*\n*([\s\S]+?)(?=\n◯|\Z)", re.MULTILINE
-        )
+        self.speaker_pattern = SPEAKER_HEADER_PATTERN
         self.enable_summary = enable_summary
         self.summarizer: Optional["SpeechSummarizer"] = None
 
@@ -186,7 +205,18 @@ class PDFToSpeechTransformer(BaseTransformer):
 
     def _preprocess_text(self, text: str) -> str:
         """전체 텍스트를 전처리합니다."""
-        text = re.sub(r"제\d+회-제\d+차\([^)]*\)\s*\d+", "", text)
+        text = re.sub(
+            r"^제\d+회-.+\(\d{4}년\d{1,2}월\d{1,2}일\)\s+\d+\s*$",
+            "",
+            text,
+            flags=re.MULTILINE,
+        )
+        text = re.sub(
+            r"^\d+\s+제\d+회-.+\(\d{4}년\d{1,2}월\d{1,2}일\)\s*$",
+            "",
+            text,
+            flags=re.MULTILINE,
+        )
 
         earliest_pos = len(text)
         for marker in APPENDIX_MARKERS:
@@ -198,8 +228,83 @@ class PDFToSpeechTransformer(BaseTransformer):
 
         return text
 
+    def _is_page_header_line(self, line: str) -> bool:
+        """페이지 머리말/꼬리말 줄인지 검사합니다."""
+        line = line.strip()
+        if re.fullmatch(
+            r"제\d+회-.+\(\d{4}년\d{1,2}월\d{1,2}일\)\s+\d+",
+            line,
+        ):
+            return True
+        if re.fullmatch(
+            r"\d+\s+제\d+회-.+\(\d{4}년\d{1,2}월\d{1,2}일\)",
+            line,
+        ):
+            return True
+        return False
+
+    def _is_separator_line(self, line: str) -> bool:
+        """발언 구분용 점선인지 검사합니다."""
+        compact_line = re.sub(r"\s+", "", line)
+        return bool(compact_line) and set(compact_line) <= {"…", ".", "ㆍ"}
+
+    def _is_agenda_item_line(self, line: str) -> bool:
+        """의사일정 법안 목록 줄인지 검사합니다."""
+        line = line.strip()
+        if not re.match(r"^\d+\.\s+", line):
+            return False
+        return bool(
+            re.search(
+                r"법률안|특별법안|기본법|지원법|진흥법|관리법|운영법|설치법|개정법률안",
+                line,
+            )
+        )
+
+    def _remove_agenda_list_lines(self, text: str) -> str:
+        """발언 중간에 삽입된 의사일정 법안 목록을 제거합니다."""
+        cleaned_lines = []
+        skipping_agenda = False
+
+        for line in text.splitlines():
+            stripped_line = line.strip()
+            if self._is_agenda_item_line(stripped_line):
+                skipping_agenda = True
+                continue
+
+            if skipping_agenda:
+                if re.match(r"^◯", stripped_line):
+                    skipping_agenda = False
+                    cleaned_lines.append(line)
+                    continue
+                if re.match(r"^\d{1,2}시\d{1,2}분", stripped_line):
+                    skipping_agenda = False
+                    cleaned_lines.append(line)
+                    continue
+                if not stripped_line:
+                    skipping_agenda = False
+                    cleaned_lines.append(line)
+                    continue
+                if re.match(r"^[가-힣]", stripped_line) and not re.search(
+                    r"법률안|의안번호|위원장 제출|대표발의|정부 제출",
+                    stripped_line,
+                ):
+                    skipping_agenda = False
+                    cleaned_lines.append(line)
+                continue
+
+            cleaned_lines.append(line)
+
+        return "\n".join(cleaned_lines)
+
     def _clean_speech_text(self, text: str) -> str:
         """발언 텍스트에서 노이즈를 제거합니다."""
+        text = self._remove_agenda_list_lines(text)
+        cleaned_lines = []
+        for line in text.splitlines():
+            if self._is_page_header_line(line) or self._is_separator_line(line):
+                continue
+            cleaned_lines.append(line)
+        text = "\n".join(cleaned_lines)
         text = re.sub(r"\(\d{1,2}시\d{1,2}분[^)]*\)", "", text)
         text = re.sub(r"\(일동 [가-힣]+\)", "", text)
         text = re.sub(r"\(전자[가-힣]*투표\)", "", text)
@@ -272,11 +377,10 @@ class PDFToSpeechTransformer(BaseTransformer):
         speech_list = []
 
         for idx, match in enumerate(self.speaker_pattern.finditer(text), start=1):
-            speaker_raw = match.group(1).strip()
-            speech = match.group(2).strip()
+            speaker_raw = match.group("speaker").strip()
+            speech = match.group("speech").strip()
 
-            full_context = speaker_raw + " " + speech[:80]
-            if self._is_non_speech(full_context):
+            if self._is_non_speech(speaker_raw):
                 continue
 
             speech = self._clean_speech_text(speech)
