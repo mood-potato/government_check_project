@@ -4,6 +4,7 @@ from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
 
 from backend.api.services.home_service import HomeService
+from backend.api.services.member_service import MemberService
 from backend.api.services.meeting_service import MeetingService
 from backend.api.services.speaker_service import SpeakerService
 from backend.api.dependencies import get_search_service
@@ -15,6 +16,24 @@ router = APIRouter()
 async def get_home() -> dict[str, Any]:
     """API: Get home page data"""
     return HomeService.get_home()
+
+
+@router.get("/members")
+async def get_members(
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> dict[str, Any]:
+    """API: Get member profile list page data"""
+    return MemberService.get_members(limit=limit, offset=offset)
+
+
+@router.get("/members/{member_slug}")
+async def get_member(member_slug: str) -> dict[str, Any]:
+    """API: Get member detail page data"""
+    member = MemberService.get_member_detail(member_slug)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    return member
 
 
 @router.get("/stats")

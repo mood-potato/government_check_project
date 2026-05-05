@@ -1,4 +1,5 @@
 import type { HomeHeroDto, HomeMemberRefDto, HomePageDto } from "./types";
+import { formatMemberLine, MemberAvatar } from "../members/MemberProfileCard";
 
 type HomePageProps = {
   data: HomePageDto;
@@ -9,21 +10,7 @@ function formatExcerptDate(date: string) {
 }
 
 function memberLine(member: HomeMemberRefDto) {
-  return [member.party_name, member.district_name].filter(Boolean).join(" | ");
-}
-
-function MemberAvatar({ member, size = "md" }: { member: HomeMemberRefDto; size?: "sm" | "md" }) {
-  const className = size === "sm" ? "avatar avatar-sm" : "avatar";
-
-  if (member.profile_image_url) {
-    return <img className={className} src={member.profile_image_url} alt={`${member.name} 프로필`} />;
-  }
-
-  return (
-    <div className={`${className} avatar-fallback`} aria-hidden="true">
-      {member.name.slice(0, 1)}
-    </div>
-  );
+  return formatMemberLine(member);
 }
 
 function HeroCard({ hero }: { hero: HomeHeroDto }) {
@@ -139,7 +126,7 @@ export function HomePage({ data }: HomePageProps) {
               {data.recent_cases.map((item) => (
                 <a className="case-card" href={`/members/${item.member.slug}`} key={item.id}>
                   <div className="case-member">
-                    <MemberAvatar member={item.member} />
+                    <MemberAvatar member={item.member} className="avatar" />
                     <div>
                       <h4>{item.member.name}</h4>
                       <p>{item.topic_label}</p>
@@ -159,7 +146,7 @@ export function HomePage({ data }: HomePageProps) {
               {data.featured_members.map((item) => (
                 <a className="featured-row" href={`/members/${item.member.slug}`} key={item.member.id}>
                   <span className="rank">{String(item.rank).padStart(2, "0")}</span>
-                  <MemberAvatar member={item.member} size="sm" />
+                  <MemberAvatar member={item.member} className="avatar avatar-sm" />
                   <div>
                     <h4>{item.member.name}</h4>
                     <p>{item.summary}</p>

@@ -3,29 +3,13 @@ import type {
   ConflictRecordDto,
   MemberDetailPageDto,
   MemberMetricDto,
-  MemberRefDto,
   MemberRelationDto
 } from "./types";
+import { formatMemberLine, MemberAvatar } from "../members/MemberProfileCard";
 
 type MemberDetailPageProps = {
   data: MemberDetailPageDto;
 };
-
-function formatMemberLine(member: MemberRefDto) {
-  return [member.party_name, member.district_name].filter(Boolean).join(" · ");
-}
-
-function Avatar({ member, className = "detail-avatar" }: { member: MemberRefDto; className?: string }) {
-  if (member.profile_image_url) {
-    return <img className={className} src={member.profile_image_url} alt={`${member.name} 프로필`} />;
-  }
-
-  return (
-    <div className={`${className} avatar-fallback`} aria-hidden="true">
-      {member.name.slice(0, 1)}
-    </div>
-  );
-}
 
 function DetailNav() {
   return (
@@ -115,7 +99,7 @@ function RelationList({
       <div className="relation-list">
         {relations.map((relation) => (
           <a className={`relation-card relation-${variant}`} href={`/members/${relation.member.slug}`} key={relation.member.id}>
-            <Avatar member={relation.member} className="relation-avatar" />
+            <MemberAvatar member={relation.member} className="relation-avatar" />
             <div>
               <h4>{relation.member.name}</h4>
               <p>{relation.basis}</p>
@@ -141,7 +125,7 @@ export function MemberDetailPage({ data }: MemberDetailPageProps) {
       <main className="main-content member-detail-main">
         <section className="member-profile-hero">
           <div className="profile-photo-frame">
-            <Avatar member={data.member} className="profile-photo" />
+            <MemberAvatar member={data.member} className="profile-photo" />
           </div>
 
           <div className="profile-copy">

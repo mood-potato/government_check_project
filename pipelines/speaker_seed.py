@@ -9,6 +9,10 @@ from typing import Any, Iterable
 from pipelines.utils.db import get_postgres_connection
 
 
+PROFILE_IMAGE_SOURCE = "국회의원정보통합API.csv 국회의원사진"
+PROFILE_IMAGE_LICENSE = "공공데이터포털 이용허락범위 제한 없음"
+
+
 @dataclass(frozen=True)
 class SpeakerSeedRow:
     mona_code: str
@@ -20,6 +24,9 @@ class SpeakerSeedRow:
     reelection_count: int | None
     gender: str | None
     birth_date: str | None
+    profile_image_url: str | None
+    profile_image_source: str | None
+    profile_image_license: str | None
 
 
 DEFAULT_CSV_PATH = Path("data") / "국회의원정보통합API.csv"
@@ -36,6 +43,9 @@ INSERT_COLUMNS = (
     "reelection_count",
     "gender",
     "birth_date",
+    "profile_image_url",
+    "profile_image_source",
+    "profile_image_license",
 )
 
 UPSERT_SPEAKER_SQL = """
@@ -48,9 +58,12 @@ INSERT INTO speakers (
     election_type,
     reelection_count,
     gender,
-    birth_date
+    birth_date,
+    profile_image_url,
+    profile_image_source,
+    profile_image_license
 ) VALUES (
-    %s, %s, %s, %s, %s, %s, %s, %s, %s
+    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
 )
 ON CONFLICT (mona_code, assembly_number) DO UPDATE SET
     name = EXCLUDED.name,
@@ -60,6 +73,14 @@ ON CONFLICT (mona_code, assembly_number) DO UPDATE SET
     reelection_count = EXCLUDED.reelection_count,
     gender = EXCLUDED.gender,
     birth_date = EXCLUDED.birth_date,
+    profile_image_url = EXCLUDED.profile_image_url,
+    profile_image_source = EXCLUDED.profile_image_source,
+    profile_image_license = EXCLUDED.profile_image_license,
+    profile_image_updated_at = CASE
+        WHEN EXCLUDED.profile_image_url IS NULL THEN speakers.profile_image_updated_at
+        WHEN speakers.profile_image_url IS DISTINCT FROM EXCLUDED.profile_image_url THEN now()
+        ELSE speakers.profile_image_updated_at
+    END,
     updated_at = now();
 """
 
@@ -138,6 +159,13 @@ def _optional_iso_date(value: str | None) -> str | None:
     return cleaned
 
 
+def _profile_image_fields(url: str | None) -> tuple[str | None, str | None, str | None]:
+    cleaned_url = _clean(url)
+    if cleaned_url is None:
+        return None, None, None
+    return cleaned_url, PROFILE_IMAGE_SOURCE, PROFILE_IMAGE_LICENSE
+
+
 def _row_to_speaker(row: dict[str, str], assembly_number: int) -> SpeakerSeedRow:
     election_type = _clean(row.get("선거구구분명"))
     election_district = _clean(row.get("선거구명"))
@@ -145,6 +173,9 @@ def _row_to_speaker(row: dict[str, str], assembly_number: int) -> SpeakerSeedRow
         election_district = None
 
     birth_date = _optional_iso_date(row.get("생일일자"))
+    profile_image_url, profile_image_source, profile_image_license = (
+        _profile_image_fields(row.get("국회의원사진"))
+    )
 
     return SpeakerSeedRow(
         mona_code=_required(row, "국회의원코드"),
@@ -156,6 +187,9 @@ def _row_to_speaker(row: dict[str, str], assembly_number: int) -> SpeakerSeedRow
         reelection_count=parse_reelection_count(row.get("재선구분명", "")),
         gender=_clean(row.get("성별")),
         birth_date=birth_date,
+        profile_image_url=profile_image_url,
+        profile_image_source=profile_image_source,
+        profile_image_license=profile_image_license,
     )
 
 
@@ -195,6 +229,9 @@ def row_to_speaker(
         reelection_count=parse_reelection_count(row.get("재선횟수(22대기준)", "")),
         gender=_clean(row.get("성별")),
         birth_date=birth_date,
+        profile_image_url=None,
+        profile_image_source=None,
+        profile_image_license=None,
     )
 
 
@@ -225,6 +262,9 @@ def _speaker_values(speaker: SpeakerSeedRow) -> str:
         _sql_int(speaker.reelection_count),
         _sql_text(speaker.gender),
         _sql_date(speaker.birth_date),
+        _sql_text(speaker.profile_image_url),
+        _sql_text(speaker.profile_image_source),
+        _sql_text(speaker.profile_image_license),
     )
     return "(" + ", ".join(values) + ")"
 
@@ -248,6 +288,9 @@ def _speaker_params(speaker: SpeakerSeedRow) -> tuple[Any, ...]:
         speaker.reelection_count,
         speaker.gender,
         speaker.birth_date,
+        speaker.profile_image_url,
+        speaker.profile_image_source,
+        speaker.profile_image_license,
     )
 
 
@@ -261,6 +304,25 @@ class SpeakerDatabaseLoader:
             connection: psycopg2 호환 DB 연결 객체입니다.
         """
         self.connection = connection
+
+    def create_table(self) -> None:
+        """`speakers` 테이블에 사진 메타 컬럼을 보장합니다."""
+        with self.connection.cursor() as cursor:
+            self._ensure_profile_image_columns(cursor)
+
+    def _ensure_profile_image_columns(self, cursor: Any) -> None:
+        """사진 메타 컬럼이 없는 DB에서도 seed 적재가 가능하게 보장합니다."""
+        queries = [
+            "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_url TEXT;",
+            "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_source TEXT;",
+            "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_license TEXT;",
+            (
+                "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS "
+                "profile_image_updated_at TIMESTAMPTZ;"
+            ),
+        ]
+        for query in queries:
+            cursor.execute(query)
 
     def load(self, speakers: Iterable[SpeakerSeedRow]) -> int:
         """의원 row 목록을 `speakers` 테이블에 upsert합니다.
@@ -277,6 +339,7 @@ class SpeakerDatabaseLoader:
         rows = list(speakers)
         try:
             with self.connection.cursor() as cursor:
+                self._ensure_profile_image_columns(cursor)
                 for speaker in rows:
                     cursor.execute(UPSERT_SPEAKER_SQL, _speaker_params(speaker))
             self.connection.commit()

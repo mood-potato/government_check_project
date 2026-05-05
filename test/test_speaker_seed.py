@@ -59,6 +59,7 @@ def test_row_to_speaker_maps_integrated_api_columns():
         "성별": "여",
         "생일일자": "1967-05-02",
         "당선대수": "제22대",
+        "국회의원사진": "https://www.assembly.go.kr/static/portal/img/openassm/new/profile.jpg",
     }
 
     speaker = row_to_speaker(row)
@@ -72,6 +73,12 @@ def test_row_to_speaker_maps_integrated_api_columns():
     assert speaker.reelection_count == 1
     assert speaker.gender == "여"
     assert speaker.birth_date == "1967-05-02"
+    assert (
+        speaker.profile_image_url
+        == "https://www.assembly.go.kr/static/portal/img/openassm/new/profile.jpg"
+    )
+    assert speaker.profile_image_source == "국회의원정보통합API.csv 국회의원사진"
+    assert speaker.profile_image_license == "공공데이터포털 이용허락범위 제한 없음"
 
 
 def test_row_to_speaker_ignores_invalid_integrated_api_birth_date():
@@ -146,6 +153,9 @@ def test_build_seed_sql_upserts_speaker_rows():
     assert "ON CONFLICT (mona_code, assembly_number) DO UPDATE SET" in sql
     assert "'오''테스트'" in sql
     assert "DATE '1970-03-04'" in sql
+    assert "profile_image_url" in sql
+    assert "profile_image_source" in sql
+    assert "profile_image_license" in sql
 
 
 def test_default_csv_path_points_to_integrated_api_file():
@@ -229,4 +239,44 @@ def test_database_loader_upserts_speakers():
         1,
         "여",
         "1980-01-02",
+        None,
+        None,
+        None,
     )
+
+
+def test_database_loader_ensures_profile_image_columns_before_upsert():
+    speaker = row_to_speaker(
+        {
+            "국회의원코드": "T2T8225E",
+            "국회의원명": "강경숙",
+            "정당명": "조국혁신당",
+            "선거구명": "비례대표",
+            "선거구구분명": "비례대표",
+            "재선구분명": "초선",
+            "성별": "여",
+            "생일일자": "1967-05-02",
+            "당선대수": "제22대",
+            "국회의원사진": "https://www.assembly.go.kr/static/portal/img/openassm/new/profile.jpg",
+        }
+    )
+    connection = FakeConnection()
+    loader = SpeakerDatabaseLoader(connection)
+
+    loader.load([speaker])
+
+    queries = [query for query, _params in connection.cursor_instance.queries]
+    assert "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_url TEXT;" in queries
+    assert (
+        "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_source TEXT;"
+        in queries
+    )
+    assert (
+        "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_license TEXT;"
+        in queries
+    )
+    assert (
+        "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_updated_at TIMESTAMPTZ;"
+        in queries
+    )
+    assert "INSERT INTO speakers" in queries[-1]
