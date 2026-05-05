@@ -4,6 +4,7 @@ from pipelines.bill_collection_pipeline import (
     BillUrlWorkbookExtractor,
     BillUrlLoader,
     BillUrlTransformer,
+    format_openapi_date,
 )
 from pipelines.base import BasePipeline
 from pipelines.utils.openapi import request_paginated_data
@@ -68,6 +69,24 @@ def test_bill_info_transformer_normalizes_openapi_rows():
     ]
 
 
+def test_bill_info_transformer_strips_bill_id_prefix_noise():
+    rows = [
+        {
+            "CONF_ID": "N054247",
+            "ERACO": "제22대",
+            "SESS": "제434회",
+            "DGR": "제6차",
+            "BILL_ID": "|PRC_B2Z4Y0X9V2E6E1D6B3A9W3X2V1U2S4",
+            "BILL_NM": "1. 주택법 일부개정법률안",
+            "LINK_URL": "https://likms.assembly.go.kr/bill/billDetail.do?billId=|PRC_B2Z4Y0X9V2E6E1D6B3A9W3X2V1U2S4",
+        }
+    ]
+
+    transformed = BillInfoTransformer().transform(rows)
+
+    assert transformed[0]["bill_id"] == "PRC_B2Z4Y0X9V2E6E1D6B3A9W3X2V1U2S4"
+
+
 def test_bill_url_transformer_normalizes_bill_conference_rows():
     rows = [
         {
@@ -97,6 +116,10 @@ def test_bill_url_transformer_normalizes_bill_conference_rows():
             "get_pdf": False,
         }
     ]
+
+
+def test_format_openapi_date_strips_openapi_padding():
+    assert format_openapi_date("20260430        ") == "2026-04-30"
 
 
 def test_bill_url_workbook_extractor_reads_korean_header_xlsx(tmp_path):

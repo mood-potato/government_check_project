@@ -75,6 +75,21 @@ def split_bill_order(bill_name: Optional[str]) -> Tuple[Optional[int], str]:
     return int(match.group(1)), match.group(2).strip()
 
 
+def normalize_bill_id(value: Optional[str]) -> Optional[str]:
+    """국회 Open API 의안 ID의 불필요한 접두 문자를 정리합니다.
+
+    Args:
+        value: API에서 받은 의안 ID입니다.
+
+    Returns:
+        앞뒤 공백과 선행 파이프 문자를 제거한 의안 ID입니다. 값이 없으면 None입니다.
+    """
+    if value is None:
+        return None
+
+    return str(value).strip().lstrip("|")
+
+
 def format_openapi_date(value: Optional[str]) -> Optional[str]:
     """국회 Open API 날짜 문자열을 ISO 날짜 문자열로 변환합니다.
 
@@ -87,6 +102,7 @@ def format_openapi_date(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
 
+    value = str(value).strip()
     return datetime.strptime(value, "%Y%m%d").date().isoformat()
 
 
@@ -209,7 +225,7 @@ class BillInfoTransformer(BaseTransformer):
                     "dae_number": parse_korean_number(item.get("ERACO")),
                     "session_number": parse_korean_number(item.get("SESS")),
                     "confer_number": parse_korean_number(item.get("DGR")),
-                    "bill_id": item.get("BILL_ID"),
+                    "bill_id": normalize_bill_id(item.get("BILL_ID")),
                     "bill_name": bill_name,
                     "bill_order": bill_order,
                     "detail_link": item.get("LINK_URL"),
@@ -622,7 +638,7 @@ class BillUrlTransformer(BaseTransformer):
             _, agenda_name = split_bill_order(item.get("BILL_NM"))
             transformed.append(
                 {
-                    "agenda_id": item.get("BILL_ID"),
+                    "agenda_id": normalize_bill_id(item.get("BILL_ID")),
                     "agenda_name": agenda_name,
                     "meeting_type": item.get("CONF_KND"),
                     "meeting_id": item.get("CONF_ID"),

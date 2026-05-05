@@ -2,7 +2,9 @@ import datetime
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import unquote, urlparse
 
 import httpx
 import pdfplumber
@@ -71,6 +73,62 @@ SPEAKER_HEADER_PATTERN = re.compile(
 )
 
 
+def update_bill_url_get_pdf_status(connection, bill_url_id: str, status: bool) -> None:
+    """bill_url의 PDF 처리 상태를 갱신합니다.
+
+    Args:
+        connection: PostgreSQL 연결 객체입니다.
+        bill_url_id: `bill_url.id` 값입니다.
+        status: PDF 처리 성공 여부입니다.
+    """
+    query = "UPDATE bill_url SET get_pdf = %s WHERE id = %s"
+    with connection.cursor() as cur:
+        cur.execute(query, (status, bill_url_id))
+        connection.commit()
+
+
+def _column_names(description) -> List[str]:
+    """DB 커서 description에서 컬럼명을 가져옵니다."""
+    names = []
+    for column in description:
+        if hasattr(column, "name"):
+            names.append(column.name)
+        else:
+            names.append(column[0])
+    return names
+
+
+def _is_local_pdf_source(source: str) -> bool:
+    """PDF 소스가 로컬 파일 경로인지 확인합니다."""
+    parsed = urlparse(source)
+    return parsed.scheme in ("", "file")
+
+
+def _local_pdf_path(source: str) -> Path:
+    """로컬 PDF 소스 문자열을 파일 경로로 변환합니다."""
+    parsed = urlparse(source)
+    if parsed.scheme == "file":
+        return Path(unquote(parsed.path))
+    return Path(source)
+
+
+def _extract_text_from_pdf_source(source: str) -> str:
+    """로컬 경로 또는 URL PDF에서 텍스트를 추출합니다."""
+    if _is_local_pdf_source(source):
+        with pdfplumber.open(_local_pdf_path(source)) as pdf:
+            return "\n".join(
+                page.extract_text() for page in pdf.pages if page.extract_text()
+            )
+
+    with httpx.Client(timeout=10.0) as client:
+        response = client.get(source)
+        response.raise_for_status()
+        with pdfplumber.open(BytesIO(response.content)) as pdf:
+            return "\n".join(
+                page.extract_text() for page in pdf.pages if page.extract_text()
+            )
+
+
 class PDFToSpeechExtractor(BaseExtractor):
     """PDF URL 처리 및 텍스트 추출을 수행합니다.
 
@@ -133,13 +191,7 @@ class PDFToSpeechExtractor(BaseExtractor):
         class_name = row.get("class_name")
 
         try:
-            with httpx.Client(timeout=10.0) as client:
-                response = client.get(pdf_url)
-                response.raise_for_status()
-                with pdfplumber.open(BytesIO(response.content)) as pdf:
-                    text = "\n".join(
-                        page.extract_text() for page in pdf.pages if page.extract_text()
-                    )
+            text = _extract_text_from_pdf_source(pdf_url)
             self.log_info(f"✅ 처리 완료: {title}")
             return {
                 "pdf_url_id": pdf_url_id,
@@ -178,6 +230,101 @@ class PDFToSpeechExtractor(BaseExtractor):
 
     def extract(self) -> List[dict]:
         """PDF URL 목록을 병렬로 처리하고 텍스트를 추출합니다."""
+        return self.extract_all()
+
+
+class BillURLToSpeechExtractor(BaseExtractor):
+    """bill_url에 저장된 회의록 PDF에서 텍스트를 추출합니다.
+
+    Args:
+        connection: bill_url 목록을 조회할 PostgreSQL 연결입니다.
+    """
+
+    def __init__(self, connection=None):
+        self.connection = connection
+
+    def fetch_bill_urls(self) -> List[Dict[str, str]]:
+        """처리되지 않은 bill_url 목록을 조회합니다.
+
+        Returns:
+            `bill_url.get_pdf = false`인 PDF row 목록입니다.
+
+        Raises:
+            ValueError: DB 연결이 없는 경우입니다.
+        """
+        if self.connection is None:
+            raise ValueError("DB connection is not provided.")
+
+        query = """
+            SELECT
+                bu.id AS bill_url_id,
+                bu.download_url,
+                bu.agenda_name,
+                bu.meeting_type,
+                bu.meeting_id,
+                bu.dae_number,
+                bu.meeting_date,
+                COALESCE(bi.confer_number, 0) AS confer_number
+            FROM bill_url bu
+            LEFT JOIN bill_info bi
+              ON bi.bill_id = bu.agenda_id
+             AND bi.meeting_id = bu.meeting_id
+            WHERE bu.get_pdf = false
+            ORDER BY bu.meeting_date, bu.created_at
+        """
+        with self.connection.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+            column_names = _column_names(cur.description)
+        return [dict(zip(column_names, row)) for row in rows]
+
+    def extract_one(self, row: Dict[str, str]) -> Dict[str, str]:
+        """bill_url PDF 한 건에서 텍스트와 발언 메타데이터를 추출합니다.
+
+        Args:
+            row: `bill_url` 테이블에서 조회한 PDF row입니다.
+
+        Returns:
+            기존 PDFToSpeechTransformer 입력 형식의 딕셔너리입니다.
+        """
+        bill_url_id = row.get("bill_url_id")
+        download_url = row.get("download_url")
+        title = row.get("agenda_name")
+
+        try:
+            text = _extract_text_from_pdf_source(download_url)
+            self.log_info(f"✅ bill_url PDF 처리 완료: {title}")
+            return {
+                "pdf_url_id": f"bill_url:{bill_url_id}",
+                "bill_url_id": bill_url_id,
+                "title": title,
+                "date": row.get("meeting_date"),
+                "text": text,
+                "confer_number": row.get("confer_number") or 0,
+                "dae_number": row.get("dae_number"),
+                "class_name": row.get("meeting_type"),
+                "file_path": download_url,
+            }
+        except Exception as e:
+            self.log_info(f"❌ {title} bill_url PDF 처리 실패: {e}")
+            if self.connection is not None:
+                update_bill_url_get_pdf_status(self.connection, bill_url_id, False)
+            raise
+
+    def extract_all(self, max_workers: int = 10) -> List[Dict[str, str]]:
+        """처리 대상 bill_url PDF 전체를 병렬로 추출합니다."""
+        rows = self.fetch_bill_urls()
+        results = []
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(self.extract_one, row) for row in rows]
+            for future in as_completed(futures):
+                results.append(future.result())
+
+        return results
+
+    def extract(self) -> List[dict]:
+        """bill_url 목록을 병렬로 처리하고 텍스트를 추출합니다."""
         return self.extract_all()
 
 
@@ -638,3 +785,58 @@ class PDFToSpeechPipeline(BasePipeline):
             except Exception as e:
                 update_get_pdf_status(self.connection, item["pdf_url_id"], False)
                 logger.error(f"❌ DB 저장 중 오류 발생: {e}")
+
+
+class BillURLToSpeechPipeline(BasePipeline):
+    """bill_url 회의록 PDF에서 발언 데이터를 추출해 저장하는 파이프라인입니다."""
+
+    def __init__(self):
+        connection = get_postgres_connection()
+        self.connection = connection
+        extractor = BillURLToSpeechExtractor(connection=connection)
+        loader = PDFToSpeechLoader(connection=connection)
+        transformer = PDFToSpeechTransformer()
+        super().__init__(extractor, loader, transformer)
+        self.connection = connection
+
+    def run(self):
+        """bill_url PDF 추출, 발언 변환, DB 저장을 순서대로 실행합니다."""
+        logger.info("✅ bill_url PDF 추출 시작")
+        raw_data = self.extractor.extract()
+        logger.info(f"✅ bill_url 처리 완료: 총 {len(raw_data)}건")
+
+        self.loader.create_table()
+
+        for item in raw_data:
+            logger.info(f"\n{item['title']} ({item['date']})")
+
+            transformed_result = self.transformer.transform(
+                text=item["text"],
+                title=item["title"],
+                date=item["date"],
+                class_name=item["class_name"],
+                file_path=item["file_path"],
+                confer_number=item["confer_number"],
+                dae_number=item["dae_number"],
+                pdf_url_id=item["pdf_url_id"],
+            )
+
+            logger.info(f"추출된 발언 수: {len(transformed_result)}")
+            for speech in transformed_result[:3]:
+                logger.info(f"- {speech['speaker']}: {speech['text'][:100]}...")
+
+            if not transformed_result:
+                logger.warning("⚠️ 변환된 발언이 없어 건너뜁니다.")
+                continue
+
+            try:
+                self.loader.load(speech_data=transformed_result)
+                logger.info(f"✅ bill_url DB 저장 완료: {len(transformed_result)}건")
+                update_bill_url_get_pdf_status(
+                    self.connection, item["bill_url_id"], True
+                )
+            except Exception as e:
+                update_bill_url_get_pdf_status(
+                    self.connection, item["bill_url_id"], False
+                )
+                logger.error(f"❌ bill_url DB 저장 중 오류 발생: {e}")
