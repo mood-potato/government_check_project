@@ -3,6 +3,7 @@ from pathlib import Path
 from pipelines.pdf_to_speech_pipeline import (
     BillURLToSpeechPipeline,
     BillURLToSpeechExtractor,
+    PDFToSpeechExtractor,
     PDFToSpeechPipeline,
     update_bill_url_get_pdf_status,
 )
@@ -26,9 +27,13 @@ class FakePDF:
 class RecordingCursor:
     def __init__(self):
         self.executed = []
+        self.description = []
 
     def execute(self, query, params=None):
         self.executed.append((query, params))
+
+    def fetchall(self):
+        return []
 
     def __enter__(self):
         return self
@@ -101,6 +106,26 @@ def test_update_bill_url_get_pdf_status_updates_bill_url_table():
         ("UPDATE bill_url SET get_pdf = %s WHERE id = %s", (True, "BILLURL1"))
     ]
     assert connection.committed is True
+
+
+def test_pdf_url_extractor_fetches_latest_pdf_urls_first():
+    connection = RecordingConnection()
+    extractor = PDFToSpeechExtractor(connection=connection)
+
+    extractor.fetch_pdf_urls()
+
+    query = connection.cursor_obj.executed[0][0]
+    assert "ORDER BY date DESC" in query
+
+
+def test_bill_url_extractor_fetches_latest_pdf_urls_first():
+    connection = RecordingConnection()
+    extractor = BillURLToSpeechExtractor(connection=connection)
+
+    extractor.fetch_bill_urls()
+
+    query = connection.cursor_obj.executed[0][0]
+    assert "ORDER BY bu.meeting_date DESC, bu.created_at DESC" in query
 
 
 def test_pdf_to_speech_pipeline_processes_one_pdf_at_a_time(monkeypatch):

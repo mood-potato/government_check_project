@@ -167,6 +167,7 @@ class PDFToSpeechExtractor(BaseExtractor):
             SELECT pdf_url_id, pdf_url, title, date, confer_number, dae_number, class_name
             FROM pdf_url
             WHERE get_pdf = false
+            ORDER BY date DESC, pdf_url_id DESC
         """
         with self.connection.cursor() as cur:
             cur.execute(query)
@@ -270,7 +271,7 @@ class BillURLToSpeechExtractor(BaseExtractor):
               ON bi.bill_id = bu.agenda_id
              AND bi.meeting_id = bu.meeting_id
             WHERE bu.get_pdf = false
-            ORDER BY bu.meeting_date, bu.created_at
+            ORDER BY bu.meeting_date DESC, bu.created_at DESC
         """
         with self.connection.cursor() as cur:
             cur.execute(query)
