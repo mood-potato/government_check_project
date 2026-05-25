@@ -191,6 +191,9 @@ db_dump
 docs/
 backup/
 
+# git worktrees
+.worktrees/
+
 # for mac
 .DS_Store
 ._.DS_Store
