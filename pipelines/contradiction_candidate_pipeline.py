@@ -8,6 +8,11 @@ from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransfor
 from pipelines.utils.db import get_postgres_connection
 
 # ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+HERO_SNAPSHOT_TTL_MINUTES = 10080  # 1 week
+
+# ---------------------------------------------------------------------------
 # Contradiction cue pairs (past_cue, recent_cue)
 # ---------------------------------------------------------------------------
 CUE_PAIRS = [
@@ -93,6 +98,7 @@ class ContradictionCandidateExtractor(BaseExtractor):
             ON p.pdf_url_id IN (pb.id::text, CONCAT('bill_url:', pb.id::text))
         WHERE p.speaker_id = %s
           AND LENGTH(p.speech) >= %s
+          AND p.date < %s
         ORDER BY p.date ASC, p.speech_number ASC
         LIMIT %s
         """
@@ -145,14 +151,19 @@ class ContradictionCandidateExtractor(BaseExtractor):
         pairs: list[dict[str, Any]] = []
 
         for speaker_id, recent_speeches in recent_by_speaker.items():
-            with self.connection.cursor() as cursor:
-                cursor.execute(
-                    past_query,
-                    (speaker_id, self.min_speech_chars, self.past_limit_per_speaker),
-                )
-                past_rows = cursor.fetchall()
-
             for recent in recent_speeches:
+                with self.connection.cursor() as cursor:
+                    cursor.execute(
+                        past_query,
+                        (
+                            speaker_id,
+                            self.min_speech_chars,
+                            recent["recent_date"],
+                            self.past_limit_per_speaker,
+                        ),
+                    )
+                    past_rows = cursor.fetchall()
+
                 for past_row in past_rows:
                     (
                         past_id,
@@ -164,7 +175,8 @@ class ContradictionCandidateExtractor(BaseExtractor):
                         past_original_url,
                     ) = past_row
 
-                    # Only include pairs where past is strictly before recent
+                    # Defensive check: DB already filters p.date < recent_date,
+                    # but guard here in case the caller passes fake/test data.
                     if past_date >= recent["recent_date"]:
                         continue
                     if past_id == recent["recent_id"]:
@@ -392,8 +404,10 @@ class ContradictionCandidateLoader(BaseLoader):
             )
             with self.connection.cursor() as cursor:
                 cursor.execute(upsert_query, params)
-            self.connection.commit()
             saved += 1
+
+        # Commit all candidate upserts in one transaction
+        self.connection.commit()
 
         # Upsert the best candidate as the hero section snapshot
         best = candidates[0]
@@ -424,7 +438,7 @@ class ContradictionCandidateLoader(BaseLoader):
             "summary": best["summary"],
         }
 
-        ttl_minutes = 10080  # 1 week
+        ttl_minutes = HERO_SNAPSHOT_TTL_MINUTES
         snapshot_query = """
         INSERT INTO home_section_snapshot (section_key, payload, calculated_at, expires_at)
         VALUES (%s, %s::jsonb, now(), now() + (%s * interval '1 minute'))

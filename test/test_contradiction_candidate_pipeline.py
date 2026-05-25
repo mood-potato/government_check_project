@@ -295,8 +295,8 @@ def test_loader_upserts_candidates_and_hero_snapshot():
     assert hero_payload["past_speech"]["spoken_date"] == "2024-01-01"
     assert hero_payload["recent_speech"]["spoken_date"] == "2026-01-01"
 
-    # commits: 2 per candidate upsert + 1 for snapshot = 3
-    assert connection.commits == 3
+    # commits: 1 for all candidates + 1 for snapshot = 2
+    assert connection.commits == 2
     assert count == 2
 
 
@@ -321,3 +321,123 @@ def test_extractor_returns_empty_when_no_connection():
     extractor = ContradictionCandidateExtractor(connection=None)
     result = extractor.extract()
     assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Multi-result fake helpers for extractor happy-path test
+# ---------------------------------------------------------------------------
+class MultiResultFakeCursor:
+    """Returns different fetchall results for each execute call."""
+
+    def __init__(self, results_sequence):
+        self.results_sequence = list(results_sequence)  # list of lists
+        self.executed = []
+        self._call_index = 0
+
+    def execute(self, query, params=None):
+        self.executed.append((query, params))
+
+    def fetchall(self):
+        result = (
+            self.results_sequence[self._call_index]
+            if self._call_index < len(self.results_sequence)
+            else []
+        )
+        self._call_index += 1
+        return result
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+
+class MultiResultFakeConnection:
+    def __init__(self, results_sequence):
+        self.cursor_instance = MultiResultFakeCursor(results_sequence)
+        self.commits = 0
+
+    def cursor(self):
+        return self.cursor_instance
+
+    def commit(self):
+        self.commits += 1
+
+
+def test_extractor_returns_pairs_for_same_speaker():
+    """최근 발언과 동일 화자의 과거 발언이 올바르게 쌍을 이룹니다.
+
+    - past_date < recent_date 인 행만 결과에 포함됩니다.
+    - past_query 파라미터에 recent_date가 날짜 상한으로 포함됩니다.
+    """
+    # Recent speeches query returns 1 speech row (14 columns)
+    recent_row = (
+        "r1",          # recent_id
+        "sp1",         # speaker_id
+        "2026-05-01",  # recent_date
+        3,             # recent_speech_number
+        "법사위",       # recent_class_name
+        "최근 발언",    # recent_speech_text
+        100,           # recent_speech_len
+        "테스트의원",   # member_name
+        "ABC",         # mona_code
+        22,            # assembly_number
+        "테스트당",     # political_party
+        "서울",         # election_district
+        None,          # profile_image_url
+        None,          # recent_original_url
+    )
+
+    # Past speeches query returns 2 rows:
+    # - p1: valid (past_date < recent_date "2026-05-01")
+    # - p2: should be filtered out by Python-level defensive guard
+    #        (past_date >= recent_date); DB filter would already exclude it
+    past_row_valid = (
+        "p1",          # past_id
+        "2024-01-01",  # past_date — strictly before 2026-05-01
+        1,             # past_speech_number
+        "기획재정위",   # past_class_name
+        "과거 발언",    # past_speech_text
+        80,            # past_speech_len
+        None,          # past_original_url
+    )
+    past_row_filtered = (
+        "p2",          # past_id
+        "2026-06-01",  # past_date — AFTER recent_date; defensive guard filters this
+        2,             # past_speech_number
+        "기획재정위",   # past_class_name
+        "미래 발언",    # past_speech_text
+        80,            # past_speech_len
+        None,          # past_original_url
+    )
+
+    connection = MultiResultFakeConnection(
+        results_sequence=[
+            [recent_row],                          # first fetchall: recent speeches
+            [past_row_valid, past_row_filtered],   # second fetchall: past speeches for sp1
+        ]
+    )
+
+    extractor = ContradictionCandidateExtractor(
+        connection=connection,
+        recent_limit=5,
+        past_limit_per_speaker=10,
+        min_speech_chars=50,
+        assembly_number=22,
+    )
+    pairs = extractor.extract()
+
+    # Only the valid past speech (p1) should produce a pair
+    assert len(pairs) == 1
+    assert pairs[0]["past_id"] == "p1"
+    assert pairs[0]["recent_id"] == "r1"
+
+    # Verify the past_query params include recent_date as the date upper bound
+    cursor = connection.cursor_instance
+    # cursor.executed[0] = recent_query, cursor.executed[1] = past_query for sp1
+    assert len(cursor.executed) == 2
+    past_query_params = cursor.executed[1][1]
+    # params: (speaker_id, min_speech_chars, recent_date, past_limit_per_speaker)
+    assert past_query_params[0] == "sp1"
+    assert past_query_params[2] == "2026-05-01"  # recent_date as date upper bound
