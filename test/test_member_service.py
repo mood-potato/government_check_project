@@ -71,6 +71,8 @@ def test_member_service_get_detail_by_slug(monkeypatch):
                 "total_meetings": 0,
                 "latest_speech_date": None,
             }
+        if "contradiction_candidates" in query:
+            return None
         return {
             "id": "11111111-1111-1111-1111-111111111111",
             "mona_code": "ABC123",
@@ -118,6 +120,11 @@ def test_member_service_get_detail_by_slug(monkeypatch):
     assert detail["similar_members"] == []
     assert detail["opposing_members"] == []
     assert detail["recent_speeches"] == []
+    assert detail["contradictory_speeches"] == [
+        {"label": "과거 발언", "speech_text": "아직 비교 가능한 발언 후보가 준비되지 않았습니다.", "source": "자동 분석 준비 중", "tone": "past"},
+        {"label": "최근 발언", "speech_text": "원문 발언 분석이 완료되면 이 영역에 표시됩니다.", "source": "자동 분석 준비 중", "tone": "recent"},
+    ]
+    assert detail["contradiction_summary"] is None
 
 
 def test_member_service_maps_activity_metrics_and_recent_speeches(monkeypatch):
@@ -134,6 +141,8 @@ def test_member_service_maps_activity_metrics_and_recent_speeches(monkeypatch):
                 "reelection_count": 2,
                 "profile_image_url": None,
             }
+        if "contradiction_candidates" in query:
+            return None
         assert "COUNT(*)" in query
         assert params == ("11111111-1111-1111-1111-111111111111",)
         return {
@@ -208,3 +217,110 @@ def test_member_service_returns_none_for_unknown_slug(monkeypatch):
 
     assert MemberService.get_member_detail("missing-22") is None
     assert MemberService.get_member_detail("bad-slug") is None
+
+
+def test_member_service_returns_placeholder_when_no_contradiction_candidate(monkeypatch):
+    def fake_fetch_one(query, params=()):
+        if "COUNT(*)" in query:
+            return {
+                "total_speeches": 0,
+                "total_meetings": 0,
+                "latest_speech_date": None,
+            }
+        if "contradiction_candidates" in query:
+            return None
+        return {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "mona_code": "ABC123",
+            "assembly_number": 22,
+            "name": "강테스트",
+            "political_party": "테스트당",
+            "election_district": "서울 테스트구",
+            "election_type": "지역구",
+            "reelection_count": 1,
+            "profile_image_url": None,
+        }
+
+    monkeypatch.setattr(
+        "backend.api.services.member_service.Database.fetch_one",
+        fake_fetch_one,
+    )
+    monkeypatch.setattr(
+        "backend.api.services.member_service.Database.fetch_all",
+        lambda query, params=(): [],
+    )
+
+    detail = MemberService.get_member_detail("abc123-22")
+
+    assert detail["contradictory_speeches"] == [
+        {
+            "label": "과거 발언",
+            "speech_text": "아직 비교 가능한 발언 후보가 준비되지 않았습니다.",
+            "source": "자동 분석 준비 중",
+            "tone": "past",
+        },
+        {
+            "label": "최근 발언",
+            "speech_text": "원문 발언 분석이 완료되면 이 영역에 표시됩니다.",
+            "source": "자동 분석 준비 중",
+            "tone": "recent",
+        },
+    ]
+    assert detail["contradiction_summary"] is None
+
+
+def test_member_service_uses_contradiction_candidate_when_available(monkeypatch):
+    candidate = {
+        "topic_label": "경제 정책",
+        "summary": "과거에는 감세를 주장했으나 최근에는 증세를 주장함.",
+        "matched_cues": ["감세", "증세"],
+        "past_spoken_date": "2020-03-10",
+        "past_speech_text": "세금을 낮춰야 경제가 살아납니다.",
+        "past_original_url": "https://record.assembly.go.kr/past/1",
+        "recent_spoken_date": "2025-11-05",
+        "recent_speech_text": "지금은 복지 재원 마련을 위해 증세가 필요합니다.",
+        "recent_original_url": "https://record.assembly.go.kr/recent/2",
+    }
+
+    def fake_fetch_one(query, params=()):
+        if "COUNT(*)" in query:
+            return {
+                "total_speeches": 10,
+                "total_meetings": 3,
+                "latest_speech_date": "2025-11-05",
+            }
+        if "contradiction_candidates" in query:
+            return candidate
+        return {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "mona_code": "ABC123",
+            "assembly_number": 22,
+            "name": "강테스트",
+            "political_party": "테스트당",
+            "election_district": "서울 테스트구",
+            "election_type": "지역구",
+            "reelection_count": 1,
+            "profile_image_url": None,
+        }
+
+    monkeypatch.setattr(
+        "backend.api.services.member_service.Database.fetch_one",
+        fake_fetch_one,
+    )
+    monkeypatch.setattr(
+        "backend.api.services.member_service.Database.fetch_all",
+        lambda query, params=(): [],
+    )
+
+    detail = MemberService.get_member_detail("abc123-22")
+
+    assert len(detail["contradictory_speeches"]) == 2
+    assert detail["contradictory_speeches"][0]["tone"] == "past"
+    assert detail["contradictory_speeches"][0]["speech_text"] == "세금을 낮춰야 경제가 살아납니다."
+    assert detail["contradictory_speeches"][0]["source"] == "2020-03-10"
+    assert detail["contradictory_speeches"][0]["original_url"] == "https://record.assembly.go.kr/past/1"
+    assert detail["contradictory_speeches"][1]["tone"] == "recent"
+    assert detail["contradictory_speeches"][1]["speech_text"] == "지금은 복지 재원 마련을 위해 증세가 필요합니다."
+    assert detail["contradictory_speeches"][1]["source"] == "2025-11-05"
+    assert detail["contradictory_speeches"][1]["original_url"] == "https://record.assembly.go.kr/recent/2"
+    assert detail["contradiction_summary"] == "과거에는 감세를 주장했으나 최근에는 증세를 주장함."
