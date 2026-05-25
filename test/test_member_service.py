@@ -145,6 +145,8 @@ def test_member_service_maps_activity_metrics_and_recent_speeches(monkeypatch):
     def fake_fetch_all(query, params=()):
         assert "ORDER BY s.date DESC, s.speech_number DESC" in query
         assert "LEFT JOIN bill_url" in query
+        assert "s.title" not in query
+        assert "\n                    title," not in query
         assert params == ("11111111-1111-1111-1111-111111111111", 5)
         return [
             {

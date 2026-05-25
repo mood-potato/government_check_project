@@ -1,3 +1,5 @@
+from datetime import date
+
 from backend.api.services.home_service import HomeService
 
 
@@ -11,6 +13,8 @@ def test_home_service_maps_speakers_to_featured_members(monkeypatch):
             "political_party": "테스트당",
             "election_district": "서울 테스트구",
             "profile_image_url": "https://open.assembly.go.kr/photo.jpg",
+            "latest_speech_date": date(2026, 5, 1),
+            "speech_count": 3,
         },
         {
             "id": "22222222-2222-2222-2222-222222222222",
@@ -20,16 +24,22 @@ def test_home_service_maps_speakers_to_featured_members(monkeypatch):
             "political_party": "예시당",
             "election_district": None,
             "profile_image_url": None,
+            "latest_speech_date": None,
+            "speech_count": 0,
         },
     ]
+    calls = []
 
     monkeypatch.setattr(
         "backend.api.services.home_service.Database.fetch_all",
-        lambda query, params=(): rows,
+        lambda query, params=(): calls.append((query, params)) or rows,
     )
 
     home = HomeService.get_home()
 
+    assert "LEFT JOIN (" in calls[0][0]
+    assert "MAX(date) AS latest_speech_date" in calls[0][0]
+    assert "ORDER BY recent_speeches.latest_speech_date DESC NULLS LAST" in calls[0][0]
     assert home["hero"] is None
     assert home["popular_keywords"] == []
     assert home["recent_cases"] == []
@@ -44,7 +54,7 @@ def test_home_service_maps_speakers_to_featured_members(monkeypatch):
                 "district_name": "서울 테스트구",
                 "profile_image_url": "https://open.assembly.go.kr/photo.jpg",
             },
-            "summary": "22대 테스트당 서울 테스트구",
+            "summary": "최근 발언 2026.05.01 · 3건",
         },
         {
             "rank": 2,

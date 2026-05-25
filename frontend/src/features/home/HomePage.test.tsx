@@ -25,7 +25,7 @@ describe("HomePage", () => {
     expect(html).toContain("원문 보기");
     expect(html).toContain("이 주제 더 보기");
     expect(html).toContain("추가 분석 사례");
-    expect(html).toContain("지금 주목받는 인물");
+    expect(html).toContain("최근 발언한 인물");
     expect(html).toContain("자동 분석으로 비교된 발언입니다. 원문 맥락을 함께 확인하세요.");
   });
 });

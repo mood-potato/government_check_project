@@ -141,7 +141,7 @@ export function HomePage({ data }: HomePageProps) {
 
         {data.featured_members.length > 0 ? (
           <section className="content-section">
-            <h3 className="section-title">지금 주목받는 인물</h3>
+            <h3 className="section-title">최근 발언한 인물</h3>
             <div className="featured-list">
               {data.featured_members.map((item) => (
                 <a className="featured-row" href={`/members/${item.member.slug}`} key={item.member.id}>

@@ -15,6 +15,11 @@ test("proxies API routes before falling back to the React app", () => {
   expect(serverSource).toContain("process.env.BACKEND_URL");
 });
 
+test("disables Bun development transforms in production", () => {
+  expect(serverSource).toContain("process.env.NODE_ENV");
+  expect(serverSource).not.toContain("development: {\n    hmr: true");
+});
+
 test("builds backend API URLs with the original path and query", () => {
   const targetUrl = buildApiTargetUrl("http://localhost:3000/api/members?limit=20", "http://localhost:8000");
 

@@ -99,7 +99,7 @@ class MemberService:
             SELECT
                 s.id::text AS id,
                 s.date AS spoken_date,
-                COALESCE(p.title, bu.agenda_name, s.title, s.class_name) AS meeting_name,
+                COALESCE(p.title, bu.agenda_name, s.class_name) AS meeting_name,
                 LEFT(s.speech, 300) AS speech_text,
                 COALESCE(p.conf_link, p.pdf_url, bu.download_url) AS original_url
             FROM (
@@ -107,7 +107,6 @@ class MemberService:
                     id,
                     pdf_url_id,
                     date,
-                    title,
                     class_name,
                     speech,
                     speech_number
