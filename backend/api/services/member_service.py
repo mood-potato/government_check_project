@@ -4,6 +4,7 @@ from backend.api.services.database import Database
 
 
 DISCLAIMER = "자동 분석 결과이며, 원문과 회의 맥락을 함께 확인하세요."
+RECENT_SPEECH_LIMIT = 5
 
 
 class MemberService:
@@ -82,7 +83,49 @@ class MemberService:
         if row is None:
             return None
 
-        return _member_detail(row)
+        activity = Database.fetch_one(
+            """
+            SELECT
+                COUNT(*) AS total_speeches,
+                COUNT(DISTINCT pdf_url_id) AS total_meetings,
+                MAX(date) AS latest_speech_date
+            FROM speeches
+            WHERE speaker_id = %s
+            """,
+            (row["id"],),
+        )
+        recent_speeches = Database.fetch_all(
+            """
+            SELECT
+                s.id::text AS id,
+                s.date AS spoken_date,
+                COALESCE(p.title, bu.agenda_name, s.title, s.class_name) AS meeting_name,
+                LEFT(s.speech, 300) AS speech_text,
+                COALESCE(p.conf_link, p.pdf_url, bu.download_url) AS original_url
+            FROM (
+                SELECT
+                    id,
+                    pdf_url_id,
+                    date,
+                    title,
+                    class_name,
+                    speech,
+                    speech_number
+                FROM speeches
+                WHERE speaker_id = %s
+                ORDER BY date DESC, speech_number DESC
+                LIMIT %s
+            ) s
+            LEFT JOIN pdf_url p
+                ON s.pdf_url_id IN (p.pdf_url_id::text, CONCAT('pdf_url:', p.pdf_url_id::text))
+            LEFT JOIN bill_url bu
+                ON s.pdf_url_id IN (bu.id::text, CONCAT('bill_url:', bu.id::text))
+            ORDER BY s.date DESC, s.speech_number DESC
+            """,
+            (row["id"], RECENT_SPEECH_LIMIT),
+        )
+
+        return _member_detail(row, activity or {}, _recent_speech_dtos(recent_speeches))
 
 
 def _parse_member_slug(member_slug: str) -> tuple[str, int] | None:
@@ -108,7 +151,11 @@ def _member_ref(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _member_detail(row: dict[str, Any]) -> dict[str, Any]:
+def _member_detail(
+    row: dict[str, Any],
+    activity: dict[str, Any],
+    recent_speeches: list[dict[str, Any]],
+) -> dict[str, Any]:
     return {
         "member": {
             **_member_ref(row),
@@ -117,11 +164,7 @@ def _member_detail(row: dict[str, Any]) -> dict[str, Any]:
             "status_label": row["election_type"] or "국회의원",
             "fact_summary": _speaker_fact_summary(row),
         },
-        "metrics": [
-            {"label": "대수", "value": f"{row['assembly_number']}대", "tone": "primary"},
-            {"label": "정당", "value": row["political_party"]},
-            {"label": "선거구", "value": row["election_district"] or "비례대표"},
-        ],
+        "metrics": _activity_metrics(row, activity),
         "conflicts": [],
         "contradictory_speeches": [
             {
@@ -137,11 +180,54 @@ def _member_detail(row: dict[str, Any]) -> dict[str, Any]:
                 "tone": "recent",
             },
         ],
+        "recent_speeches": recent_speeches,
         "agendas": [],
         "similar_members": [],
         "opposing_members": [],
         "disclaimer": DISCLAIMER,
     }
+
+
+def _activity_metrics(
+    row: dict[str, Any], activity: dict[str, Any]
+) -> list[dict[str, str]]:
+    latest_speech_date = activity.get("latest_speech_date")
+    return [
+        {
+            "label": "총 발언 수",
+            "value": str(activity.get("total_speeches") or 0),
+            "supporting_text": "건",
+            "tone": "primary",
+        },
+        {
+            "label": "참여 회의 수",
+            "value": str(activity.get("total_meetings") or 0),
+            "supporting_text": "회",
+        },
+        {
+            "label": "최근 발언일",
+            "value": _format_date(latest_speech_date) if latest_speech_date else "기록 없음",
+        },
+        {"label": "대수", "value": f"{row['assembly_number']}대"},
+    ]
+
+
+def _recent_speech_dtos(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            **row,
+            "spoken_date": _format_iso_date(row["spoken_date"]),
+        }
+        for row in rows
+    ]
+
+
+def _format_date(value: Any) -> str:
+    return str(value).replace("-", ".")
+
+
+def _format_iso_date(value: Any) -> str:
+    return str(value)
 
 
 def _speaker_summary(row: dict[str, Any]) -> str:

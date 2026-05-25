@@ -1,3 +1,5 @@
+from datetime import date
+
 from backend.api.services.member_service import MemberService
 
 
@@ -63,6 +65,12 @@ def test_member_service_get_detail_by_slug(monkeypatch):
 
     def fake_fetch_one(query, params=()):
         calls.append((query, params))
+        if "COUNT(*)" in query:
+            return {
+                "total_speeches": 0,
+                "total_meetings": 0,
+                "latest_speech_date": None,
+            }
         return {
             "id": "11111111-1111-1111-1111-111111111111",
             "mona_code": "ABC123",
@@ -78,6 +86,10 @@ def test_member_service_get_detail_by_slug(monkeypatch):
     monkeypatch.setattr(
         "backend.api.services.member_service.Database.fetch_one",
         fake_fetch_one,
+    )
+    monkeypatch.setattr(
+        "backend.api.services.member_service.Database.fetch_all",
+        lambda query, params=(): [],
     )
 
     detail = MemberService.get_member_detail("abc123-22")
@@ -95,11 +107,95 @@ def test_member_service_get_detail_by_slug(monkeypatch):
         "status_label": "지역구",
         "fact_summary": "22대 테스트당 서울 테스트구 재선 의원",
     }
-    assert detail["metrics"][0] == {"label": "대수", "value": "22대", "tone": "primary"}
+    assert detail["metrics"] == [
+        {"label": "총 발언 수", "value": "0", "supporting_text": "건", "tone": "primary"},
+        {"label": "참여 회의 수", "value": "0", "supporting_text": "회"},
+        {"label": "최근 발언일", "value": "기록 없음"},
+        {"label": "대수", "value": "22대"},
+    ]
     assert detail["conflicts"] == []
     assert detail["agendas"] == []
     assert detail["similar_members"] == []
     assert detail["opposing_members"] == []
+    assert detail["recent_speeches"] == []
+
+
+def test_member_service_maps_activity_metrics_and_recent_speeches(monkeypatch):
+    def fake_fetch_one(query, params=()):
+        if "FROM speakers" in query:
+            return {
+                "id": "11111111-1111-1111-1111-111111111111",
+                "mona_code": "ABC123",
+                "assembly_number": 22,
+                "name": "강테스트",
+                "political_party": "테스트당",
+                "election_district": "서울 테스트구",
+                "election_type": "지역구",
+                "reelection_count": 2,
+                "profile_image_url": None,
+            }
+        assert "COUNT(*)" in query
+        assert params == ("11111111-1111-1111-1111-111111111111",)
+        return {
+            "total_speeches": 17,
+            "total_meetings": 4,
+            "latest_speech_date": "2026-04-24",
+        }
+
+    def fake_fetch_all(query, params=()):
+        assert "ORDER BY s.date DESC, s.speech_number DESC" in query
+        assert "LEFT JOIN bill_url" in query
+        assert params == ("11111111-1111-1111-1111-111111111111", 5)
+        return [
+            {
+                "id": "speech-2",
+                "spoken_date": date(2026, 4, 24),
+                "meeting_name": "제2차 본회의",
+                "speech_text": "최근 발언 원문입니다.",
+                "original_url": "https://record.assembly.go.kr/conf/2",
+            },
+            {
+                "id": "speech-1",
+                "spoken_date": "2026-04-21",
+                "meeting_name": "제1차 본회의",
+                "speech_text": "이전 발언 원문입니다.",
+                "original_url": None,
+            },
+        ]
+
+    monkeypatch.setattr(
+        "backend.api.services.member_service.Database.fetch_one",
+        fake_fetch_one,
+    )
+    monkeypatch.setattr(
+        "backend.api.services.member_service.Database.fetch_all",
+        fake_fetch_all,
+    )
+
+    detail = MemberService.get_member_detail("abc123-22")
+
+    assert detail["metrics"] == [
+        {"label": "총 발언 수", "value": "17", "supporting_text": "건", "tone": "primary"},
+        {"label": "참여 회의 수", "value": "4", "supporting_text": "회"},
+        {"label": "최근 발언일", "value": "2026.04.24"},
+        {"label": "대수", "value": "22대"},
+    ]
+    assert detail["recent_speeches"] == [
+        {
+            "id": "speech-2",
+            "spoken_date": "2026-04-24",
+            "meeting_name": "제2차 본회의",
+            "speech_text": "최근 발언 원문입니다.",
+            "original_url": "https://record.assembly.go.kr/conf/2",
+        },
+        {
+            "id": "speech-1",
+            "spoken_date": "2026-04-21",
+            "meeting_name": "제1차 본회의",
+            "speech_text": "이전 발언 원문입니다.",
+            "original_url": None,
+        },
+    ]
 
 
 def test_member_service_returns_none_for_unknown_slug(monkeypatch):

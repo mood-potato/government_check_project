@@ -54,6 +54,7 @@ describe("memberApi", () => {
         { label: "과거 발언", speech_text: "준비 중", source: "자동 분석 준비 중", tone: "past" },
         { label: "최근 발언", speech_text: "준비 중", source: "자동 분석 준비 중", tone: "recent" }
       ],
+      recent_speeches: [],
       agendas: [],
       similar_members: [],
       opposing_members: [],

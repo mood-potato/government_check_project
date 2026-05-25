@@ -3,7 +3,8 @@ import type {
   ConflictRecordDto,
   MemberDetailPageDto,
   MemberMetricDto,
-  MemberRelationDto
+  MemberRelationDto,
+  RecentSpeechDto
 } from "./types";
 import { formatMemberLine, MemberAvatar } from "../members/MemberProfileCard";
 
@@ -31,6 +32,25 @@ function MetricCard({ metric }: { metric: MemberMetricDto }) {
         <strong>{metric.value}</strong>
         {metric.supporting_text ? <span>{metric.supporting_text}</span> : null}
       </div>
+    </article>
+  );
+}
+
+function RecentSpeechCard({ speech }: { speech: RecentSpeechDto }) {
+  return (
+    <article className="recent-speech-card">
+      <div className="recent-speech-meta">
+        <time>{speech.spoken_date.replaceAll("-", ".")}</time>
+        <h3>{speech.meeting_name}</h3>
+      </div>
+      <p>"{speech.speech_text}"</p>
+      {speech.original_url ? (
+        <a className="source-link" href={speech.original_url}>
+          원문 보기
+        </a>
+      ) : (
+        <span className="source-unavailable">원문 링크 미제공</span>
+      )}
     </article>
   );
 }
@@ -159,6 +179,22 @@ export function MemberDetailPage({ data }: MemberDetailPageProps) {
           ))}
         </section>
 
+        <section className="member-section" id="recent-speeches">
+          <div className="section-heading">
+            <h2>최근 발언 기록</h2>
+            <p>최근 회의록에서 확인된 발언입니다. 원문 링크가 있는 경우 전체 맥락을 확인할 수 있습니다.</p>
+          </div>
+          {data.recent_speeches.length > 0 ? (
+            <div className="recent-speech-list">
+              {data.recent_speeches.map((speech) => (
+                <RecentSpeechCard speech={speech} key={speech.id} />
+              ))}
+            </div>
+          ) : (
+            <p className="empty-section">표시할 발언 기록이 없습니다.</p>
+          )}
+        </section>
+
         <section className="member-section">
           <div className="section-heading">
             <h2>이 사람이 자주 선 갈등</h2>
@@ -171,7 +207,7 @@ export function MemberDetailPage({ data }: MemberDetailPageProps) {
           </div>
         </section>
 
-        <section className="contradiction-panel" id="recent-speeches">
+        <section className="contradiction-panel">
           <div className="contradiction-heading">
             <div>
               <h2>상반 발언 분석</h2>

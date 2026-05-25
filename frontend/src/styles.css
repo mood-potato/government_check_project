@@ -770,6 +770,69 @@ input {
   margin-bottom: 5rem;
 }
 
+.recent-speech-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.recent-speech-card {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.4rem;
+  border-radius: 8px;
+  background: var(--surface-lowest);
+  box-shadow: var(--shadow);
+  padding: 1.3rem 1.4rem;
+}
+
+.recent-speech-meta time {
+  display: block;
+  margin-bottom: 0.42rem;
+  color: #8a7c75;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.recent-speech-meta h3 {
+  margin: 0;
+  font-family: var(--headline);
+  font-size: 1rem;
+}
+
+.recent-speech-card p {
+  margin: 0;
+  color: var(--on-surface-variant);
+  line-height: 1.72;
+}
+
+.source-link {
+  border-radius: 8px;
+  background: var(--primary-fixed);
+  color: var(--primary-strong);
+  padding: 0.72rem 0.95rem;
+  font-family: var(--headline);
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.source-unavailable {
+  color: #8a7c75;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.empty-section {
+  margin: 0;
+  border-radius: 8px;
+  background: var(--surface-low);
+  color: var(--on-surface-variant);
+  padding: 1.2rem 1.35rem;
+}
+
 .section-heading {
   margin-bottom: 2rem;
 }
@@ -1199,6 +1262,10 @@ input {
   .conflict-grid,
   .speech-compare-grid,
   .relation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recent-speech-card {
     grid-template-columns: 1fr;
   }
 
