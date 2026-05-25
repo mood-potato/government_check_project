@@ -18,6 +18,24 @@ async def get_home() -> dict[str, Any]:
     return HomeService.get_home()
 
 
+@router.get("/home/hero")
+async def get_home_hero() -> dict[str, Any] | None:
+    """API: Get precomputed home hero data"""
+    return HomeService.get_home_hero()
+
+
+@router.get("/home/recent-cases")
+async def get_home_recent_cases() -> list[dict[str, Any]]:
+    """API: Get home recent analysis cases"""
+    return HomeService.get_recent_cases()
+
+
+@router.get("/home/featured-members")
+async def get_home_featured_members() -> list[dict[str, Any]]:
+    """API: Get home featured members"""
+    return HomeService.get_featured_members()
+
+
 @router.get("/members")
 async def get_members(
     limit: int = Query(200, ge=1, le=500),

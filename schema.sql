@@ -70,6 +70,23 @@ CREATE INDEX idx_speeches_pdf_url_id ON speeches (pdf_url_id);
 CREATE INDEX idx_speeches_speaker_id ON speeches (speaker_id);
 CREATE INDEX idx_speeches_speaker_name ON speeches (speaker_name);
 CREATE INDEX idx_speeches_vectorized ON speeches (vectorized);
+CREATE INDEX IF NOT EXISTS idx_speeches_recent_member
+ON speeches (date DESC, speech_number DESC)
+WHERE speaker_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_speeches_speaker_date_order
+ON speeches (speaker_id, date ASC, speech_number ASC)
+WHERE speaker_id IS NOT NULL;
+
+-- ============================================================
+-- home_section_snapshot
+-- ============================================================
+CREATE TABLE IF NOT EXISTS home_section_snapshot (
+    section_key      text PRIMARY KEY,
+    payload          jsonb NOT NULL,
+    calculated_at    timestamptz NOT NULL DEFAULT now(),
+    expires_at       timestamptz,
+    version          integer NOT NULL DEFAULT 1
+);
 
 -- ============================================================
 -- bill_info  (회의별 의안 목록)

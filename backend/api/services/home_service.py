@@ -10,6 +10,40 @@ class HomeService:
     @staticmethod
     def get_home(limit: int = 12) -> dict[str, Any]:
         """홈 화면에 표시할 실제 의원 데이터를 반환합니다."""
+        return {
+            "hero": HomeService.get_home_hero(),
+            "popular_keywords": [],
+            "recent_cases": HomeService.get_recent_cases(),
+            "featured_members": HomeService.get_featured_members(limit=limit),
+            "disclaimer": DISCLAIMER,
+        }
+
+    @staticmethod
+    def get_home_hero() -> dict[str, Any] | None:
+        """미리 계산된 홈 히어로 스냅샷을 반환합니다."""
+        row = Database.fetch_one(
+            """
+            SELECT
+                payload,
+                calculated_at,
+                expires_at
+            FROM home_section_snapshot
+            WHERE section_key = %s
+            """,
+            ("hero",),
+        )
+        if row is None:
+            return None
+        return row["payload"]
+
+    @staticmethod
+    def get_recent_cases() -> list[dict[str, Any]]:
+        """홈 화면 추가 분석 사례를 반환합니다."""
+        return []
+
+    @staticmethod
+    def get_featured_members(limit: int = 12) -> list[dict[str, Any]]:
+        """홈 화면 최근 발언 인물 목록을 반환합니다."""
         rows = Database.fetch_all(
             """
             SELECT
@@ -19,50 +53,30 @@ class HomeService:
                 sp.name,
                 sp.political_party,
                 sp.election_district,
-                sp.profile_image_url,
-                COALESCE(recent_speeches.speech_count, 0) AS speech_count,
-                recent_speeches.latest_speech_date
-            FROM speakers
-                sp
-            LEFT JOIN (
-                SELECT
-                    speaker_id,
-                    COUNT(*) AS speech_count,
-                    MAX(date) AS latest_speech_date
-                FROM speeches
-                GROUP BY speaker_id
-            ) recent_speeches
-                ON recent_speeches.speaker_id = sp.id
+                sp.profile_image_url
+            FROM speakers sp
             WHERE sp.assembly_number = (SELECT MAX(assembly_number) FROM speakers)
-            ORDER BY recent_speeches.latest_speech_date DESC NULLS LAST,
-                recent_speeches.speech_count DESC NULLS LAST,
-                sp.name ASC
+            ORDER BY sp.name ASC
             LIMIT %s
             """,
             (limit,),
         )
 
-        return {
-            "hero": None,
-            "popular_keywords": [],
-            "recent_cases": [],
-            "featured_members": [
-                {
-                    "rank": index,
-                    "member": {
-                        "id": row["id"],
-                        "slug": f"{row['mona_code']}-{row['assembly_number']}".lower(),
-                        "name": row["name"],
-                        "party_name": row["political_party"],
-                        "district_name": row["election_district"],
-                        "profile_image_url": row["profile_image_url"],
-                    },
-                    "summary": _speaker_summary(row),
-                }
-                for index, row in enumerate(rows, start=1)
-            ],
-            "disclaimer": DISCLAIMER,
-        }
+        return [
+            {
+                "rank": index,
+                "member": {
+                    "id": row["id"],
+                    "slug": f"{row['mona_code']}-{row['assembly_number']}".lower(),
+                    "name": row["name"],
+                    "party_name": row["political_party"],
+                    "district_name": row["election_district"],
+                    "profile_image_url": row["profile_image_url"],
+                },
+                "summary": _speaker_summary(row),
+            }
+            for index, row in enumerate(rows, start=1)
+        ]
 
 
 def _speaker_summary(row: dict[str, Any]) -> str:

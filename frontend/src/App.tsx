@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { HomePage } from "./features/home/HomePage";
-import { loadHomePage } from "./features/home/homeApi";
+import { loadFeaturedMembers, loadHomeHero, loadRecentCases } from "./features/home/homeApi";
 import type { HomePageDto } from "./features/home/types";
 import { MemberDetailPage } from "./features/member-detail/MemberDetailPage";
 import type { MemberDetailPageDto } from "./features/member-detail/types";
@@ -104,21 +104,30 @@ function MemberDetailRoute({ slug }: { slug: string }) {
 }
 
 function HomeRoute() {
-  const [data, setData] = useState<HomePageDto | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<HomePageDto>({
+    hero: null,
+    popular_keywords: [],
+    recent_cases: [],
+    featured_members: [],
+    disclaimer: "자동 분석으로 비교된 발언입니다. 원문 맥락을 함께 확인하세요."
+  });
+  const [heroStatus, setHeroStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [recentCasesStatus, setRecentCasesStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [featuredMembersStatus, setFeaturedMembersStatus] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     let isActive = true;
 
-    loadHomePage()
-      .then((homeData) => {
+    loadHomeHero()
+      .then((hero) => {
         if (isActive) {
-          setData(homeData);
+          setData((current) => ({ ...current, hero }));
+          setHeroStatus("ready");
         }
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         if (isActive) {
-          setError(err instanceof Error ? err.message : "Unknown error");
+          setHeroStatus("error");
         }
       });
 
@@ -127,15 +136,58 @@ function HomeRoute() {
     };
   }, []);
 
-  if (error) {
-    return <AppStatus message="의원 데이터를 불러오지 못했습니다." detail={error} />;
-  }
+  useEffect(() => {
+    let isActive = true;
 
-  if (!data) {
-    return <AppStatus message="의원 데이터를 불러오는 중입니다." />;
-  }
+    loadRecentCases()
+      .then((recentCases) => {
+        if (isActive) {
+          setData((current) => ({ ...current, recent_cases: recentCases }));
+          setRecentCasesStatus("ready");
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setRecentCasesStatus("error");
+        }
+      });
 
-  return <HomePage data={data} />;
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    loadFeaturedMembers()
+      .then((featuredMembers) => {
+        if (isActive) {
+          setData((current) => ({ ...current, featured_members: featuredMembers }));
+          setFeaturedMembersStatus("ready");
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setFeaturedMembersStatus("error");
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  return (
+    <HomePage
+      data={data}
+      sectionStatus={{
+        hero: heroStatus,
+        recentCases: recentCasesStatus,
+        featuredMembers: featuredMembersStatus
+      }}
+    />
+  );
 }
 
 function AppStatus({ message, detail }: { message: string; detail?: string }) {
