@@ -124,7 +124,37 @@ class MemberService:
             (row["id"], RECENT_SPEECH_LIMIT),
         )
 
-        return _member_detail(row, activity or {}, _recent_speech_dtos(recent_speeches))
+        contradictory_candidate = Database.fetch_one(
+            """
+            SELECT
+                cc.topic_label,
+                cc.summary,
+                cc.matched_cues,
+                past_s.date::text AS past_spoken_date,
+                LEFT(past_s.speech, 300) AS past_speech_text,
+                COALESCE(pp.conf_link, pp.pdf_url, pb.download_url) AS past_original_url,
+                recent_s.date::text AS recent_spoken_date,
+                LEFT(recent_s.speech, 300) AS recent_speech_text,
+                COALESCE(rp.conf_link, rp.pdf_url, rb.download_url) AS recent_original_url
+            FROM contradiction_candidates cc
+            JOIN speeches past_s ON past_s.id = cc.past_speech_id
+            JOIN speeches recent_s ON recent_s.id = cc.recent_speech_id
+            LEFT JOIN pdf_url pp
+                ON past_s.pdf_url_id IN (pp.pdf_url_id::text, CONCAT('pdf_url:', pp.pdf_url_id::text))
+            LEFT JOIN bill_url pb
+                ON past_s.pdf_url_id IN (pb.id::text, CONCAT('bill_url:', pb.id::text))
+            LEFT JOIN pdf_url rp
+                ON recent_s.pdf_url_id IN (rp.pdf_url_id::text, CONCAT('pdf_url:', rp.pdf_url_id::text))
+            LEFT JOIN bill_url rb
+                ON recent_s.pdf_url_id IN (rb.id::text, CONCAT('bill_url:', rb.id::text))
+            WHERE cc.speaker_id = %s
+            ORDER BY cc.created_at DESC
+            LIMIT 1
+            """,
+            (row["id"],),
+        )
+
+        return _member_detail(row, activity or {}, _recent_speech_dtos(recent_speeches), contradictory_candidate)
 
 
 def _parse_member_slug(member_slug: str) -> tuple[str, int] | None:
@@ -154,18 +184,28 @@ def _member_detail(
     row: dict[str, Any],
     activity: dict[str, Any],
     recent_speeches: list[dict[str, Any]],
+    contradictory_candidate: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
-        "member": {
-            **_member_ref(row),
-            "generation_label": f"제{row['assembly_number']}대 국회의원",
-            "committee_name": None,
-            "status_label": row["election_type"] or "국회의원",
-            "fact_summary": _speaker_fact_summary(row),
-        },
-        "metrics": _activity_metrics(row, activity),
-        "conflicts": [],
-        "contradictory_speeches": [
+    if contradictory_candidate is not None:
+        contradictory_speeches = [
+            {
+                "label": "과거 발언",
+                "speech_text": contradictory_candidate["past_speech_text"],
+                "source": contradictory_candidate["past_spoken_date"] or "날짜 미상",
+                "tone": "past",
+                "original_url": contradictory_candidate["past_original_url"],
+            },
+            {
+                "label": "최근 발언",
+                "speech_text": contradictory_candidate["recent_speech_text"],
+                "source": contradictory_candidate["recent_spoken_date"] or "날짜 미상",
+                "tone": "recent",
+                "original_url": contradictory_candidate["recent_original_url"],
+            },
+        ]
+        contradiction_summary = contradictory_candidate["summary"]
+    else:
+        contradictory_speeches = [
             {
                 "label": "과거 발언",
                 "speech_text": "아직 비교 가능한 발언 후보가 준비되지 않았습니다.",
@@ -178,7 +218,21 @@ def _member_detail(
                 "source": "자동 분석 준비 중",
                 "tone": "recent",
             },
-        ],
+        ]
+        contradiction_summary = None
+
+    return {
+        "member": {
+            **_member_ref(row),
+            "generation_label": f"제{row['assembly_number']}대 국회의원",
+            "committee_name": None,
+            "status_label": row["election_type"] or "국회의원",
+            "fact_summary": _speaker_fact_summary(row),
+        },
+        "metrics": _activity_metrics(row, activity),
+        "conflicts": [],
+        "contradictory_speeches": contradictory_speeches,
+        "contradiction_summary": contradiction_summary,
         "recent_speeches": recent_speeches,
         "agendas": [],
         "similar_members": [],
