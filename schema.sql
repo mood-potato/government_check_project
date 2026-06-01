@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS  speakers (
     reelection_count INT,                   -- "4선" → 4
     gender           TEXT,
     birth_date       DATE,
+    profile_image_url TEXT,
+    profile_image_source TEXT,
+    profile_image_license TEXT,
+    profile_image_updated_at TIMESTAMPTZ,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
 
@@ -66,6 +70,23 @@ CREATE INDEX idx_speeches_pdf_url_id ON speeches (pdf_url_id);
 CREATE INDEX idx_speeches_speaker_id ON speeches (speaker_id);
 CREATE INDEX idx_speeches_speaker_name ON speeches (speaker_name);
 CREATE INDEX idx_speeches_vectorized ON speeches (vectorized);
+CREATE INDEX IF NOT EXISTS idx_speeches_recent_member
+ON speeches (date DESC, speech_number DESC)
+WHERE speaker_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_speeches_speaker_date_order
+ON speeches (speaker_id, date ASC, speech_number ASC)
+WHERE speaker_id IS NOT NULL;
+
+-- ============================================================
+-- home_section_snapshot
+-- ============================================================
+CREATE TABLE IF NOT EXISTS home_section_snapshot (
+    section_key      text PRIMARY KEY,
+    payload          jsonb NOT NULL,
+    calculated_at    timestamptz NOT NULL DEFAULT now(),
+    expires_at       timestamptz,
+    version          integer NOT NULL DEFAULT 1
+);
 
 -- ============================================================
 -- bill_info  (회의별 의안 목록)
@@ -102,6 +123,26 @@ CREATE TABLE IF NOT EXISTS  bill_url (
 
     CONSTRAINT idx_bill_url_agenda_meeting_download UNIQUE (agenda_id, meeting_id, download_url)
 );
+
+-- ============================================================
+-- contradiction_candidates
+-- ============================================================
+CREATE TABLE IF NOT EXISTS contradiction_candidates (
+    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    speaker_id       UUID        NOT NULL REFERENCES speakers (id),
+    past_speech_id   UUID        NOT NULL REFERENCES speeches (id),
+    recent_speech_id UUID        NOT NULL REFERENCES speeches (id),
+    topic_label      TEXT        NOT NULL,
+    summary          TEXT        NOT NULL,
+    score            FLOAT       NOT NULL DEFAULT 0.0,
+    matched_cues     TEXT[]      NOT NULL DEFAULT '{}',
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT uq_contradiction_pair UNIQUE (past_speech_id, recent_speech_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_contradiction_speaker_created
+ON contradiction_candidates (speaker_id, created_at DESC);
 
 -- ============================================================
 -- pipeline_runs / pipeline_row_events (모니터링)

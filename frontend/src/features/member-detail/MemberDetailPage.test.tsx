@@ -20,6 +20,10 @@ describe("MemberDetailPage", () => {
     expect(html).toContain("상반 발언 분석");
     expect(html).toContain("2024년 1월 발언");
     expect(html).toContain("2026년 3월 발언");
+    expect(html).toContain("최근 발언 기록");
+    expect(html).toContain("제434회 제2차 본회의");
+    expect(html).toContain("원문 보기");
+    expect(html).toContain("href=\"https://record.assembly.go.kr/conf/latest\"");
     expect(html).toContain("참여 안건 기록");
     expect(html).toContain("논리가 유사한 의원");
     expect(html).toContain("주요 갈등 상대");

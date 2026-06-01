@@ -3,29 +3,14 @@ import type {
   ConflictRecordDto,
   MemberDetailPageDto,
   MemberMetricDto,
-  MemberRefDto,
-  MemberRelationDto
+  MemberRelationDto,
+  RecentSpeechDto
 } from "./types";
+import { formatMemberLine, MemberAvatar } from "../members/MemberProfileCard";
 
 type MemberDetailPageProps = {
   data: MemberDetailPageDto;
 };
-
-function formatMemberLine(member: MemberRefDto) {
-  return [member.party_name, member.district_name].filter(Boolean).join(" · ");
-}
-
-function Avatar({ member, className = "detail-avatar" }: { member: MemberRefDto; className?: string }) {
-  if (member.profile_image_url) {
-    return <img className={className} src={member.profile_image_url} alt={`${member.name} 프로필`} />;
-  }
-
-  return (
-    <div className={`${className} avatar-fallback`} aria-hidden="true">
-      {member.name.slice(0, 1)}
-    </div>
-  );
-}
 
 function DetailNav() {
   return (
@@ -47,6 +32,25 @@ function MetricCard({ metric }: { metric: MemberMetricDto }) {
         <strong>{metric.value}</strong>
         {metric.supporting_text ? <span>{metric.supporting_text}</span> : null}
       </div>
+    </article>
+  );
+}
+
+function RecentSpeechCard({ speech }: { speech: RecentSpeechDto }) {
+  return (
+    <article className="recent-speech-card">
+      <div className="recent-speech-meta">
+        <time>{speech.spoken_date.replaceAll("-", ".")}</time>
+        <h3>{speech.meeting_name}</h3>
+      </div>
+      <p>"{speech.speech_text}"</p>
+      {speech.original_url ? (
+        <a className="source-link" href={speech.original_url}>
+          원문 보기
+        </a>
+      ) : (
+        <span className="source-unavailable">원문 링크 미제공</span>
+      )}
     </article>
   );
 }
@@ -115,7 +119,7 @@ function RelationList({
       <div className="relation-list">
         {relations.map((relation) => (
           <a className={`relation-card relation-${variant}`} href={`/members/${relation.member.slug}`} key={relation.member.id}>
-            <Avatar member={relation.member} className="relation-avatar" />
+            <MemberAvatar member={relation.member} className="relation-avatar" />
             <div>
               <h4>{relation.member.name}</h4>
               <p>{relation.basis}</p>
@@ -141,7 +145,7 @@ export function MemberDetailPage({ data }: MemberDetailPageProps) {
       <main className="main-content member-detail-main">
         <section className="member-profile-hero">
           <div className="profile-photo-frame">
-            <Avatar member={data.member} className="profile-photo" />
+            <MemberAvatar member={data.member} className="profile-photo" />
           </div>
 
           <div className="profile-copy">
@@ -175,6 +179,22 @@ export function MemberDetailPage({ data }: MemberDetailPageProps) {
           ))}
         </section>
 
+        <section className="member-section" id="recent-speeches">
+          <div className="section-heading">
+            <h2>최근 발언 기록</h2>
+            <p>최근 회의록에서 확인된 발언입니다. 원문 링크가 있는 경우 전체 맥락을 확인할 수 있습니다.</p>
+          </div>
+          {data.recent_speeches.length > 0 ? (
+            <div className="recent-speech-list">
+              {data.recent_speeches.map((speech) => (
+                <RecentSpeechCard speech={speech} key={speech.id} />
+              ))}
+            </div>
+          ) : (
+            <p className="empty-section">표시할 발언 기록이 없습니다.</p>
+          )}
+        </section>
+
         <section className="member-section">
           <div className="section-heading">
             <h2>이 사람이 자주 선 갈등</h2>
@@ -187,7 +207,7 @@ export function MemberDetailPage({ data }: MemberDetailPageProps) {
           </div>
         </section>
 
-        <section className="contradiction-panel" id="recent-speeches">
+        <section className="contradiction-panel">
           <div className="contradiction-heading">
             <div>
               <h2>상반 발언 분석</h2>

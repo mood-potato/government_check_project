@@ -69,6 +69,15 @@ export const sampleMemberDetailPage: MemberDetailPageDto = {
       tone: "recent"
     }
   ],
+  recent_speeches: [
+    {
+      id: "speech_latest",
+      spoken_date: "2026-04-24",
+      meeting_name: "제434회 제2차 본회의",
+      speech_text: "국민이 체감할 수 있는 정책 집행이 필요합니다.",
+      original_url: "https://record.assembly.go.kr/conf/latest"
+    }
+  ],
   agendas: [
     {
       id: "agenda_1",

@@ -38,6 +38,14 @@ export type ContradictorySpeechDto = {
   tone: "past" | "recent";
 };
 
+export type RecentSpeechDto = {
+  id: string;
+  spoken_date: string;
+  meeting_name: string;
+  speech_text: string;
+  original_url: string | null;
+};
+
 export type AgendaRecordDto = {
   id: string;
   title: string;
@@ -57,6 +65,7 @@ export type MemberDetailPageDto = {
   metrics: MemberMetricDto[];
   conflicts: ConflictRecordDto[];
   contradictory_speeches: [ContradictorySpeechDto, ContradictorySpeechDto];
+  recent_speeches: RecentSpeechDto[];
   agendas: AgendaRecordDto[];
   similar_members: MemberRelationDto[];
   opposing_members: MemberRelationDto[];

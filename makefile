@@ -1,7 +1,11 @@
 PROJECT_NAME := government_project
 DOCKER_COMPOSE ?= docker compose
+BACKEND_PORT ?= 8000
+FRONTEND_PORT ?= 3000
 include .env
 export $(shell sed 's/=.*//' .env)
+
+.PHONY: up down restart logs ps build deploy backend-logs frontend-logs pipeline backend-local frontend-local dev-local
 
 up:
 	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) up -d
@@ -34,3 +38,12 @@ frontend-logs:
 
 pipeline:
 	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) --profile pipeline run --rm pipeline
+
+backend-local:
+	uv run uvicorn backend.api.main:app --host 127.0.0.1 --port $(BACKEND_PORT) --reload
+
+frontend-local:
+	cd frontend && BACKEND_URL=http://localhost:$(BACKEND_PORT) PORT=$(FRONTEND_PORT) bun run dev
+
+dev-local:
+	$(MAKE) -j2 backend-local frontend-local

@@ -1,7 +1,13 @@
 import type { HomeHeroDto, HomeMemberRefDto, HomePageDto } from "./types";
+import { formatMemberLine, MemberAvatar } from "../members/MemberProfileCard";
 
 type HomePageProps = {
   data: HomePageDto;
+  sectionStatus?: {
+    hero?: "loading" | "ready" | "error";
+    recentCases?: "loading" | "ready" | "error";
+    featuredMembers?: "loading" | "ready" | "error";
+  };
 };
 
 function formatExcerptDate(date: string) {
@@ -9,21 +15,7 @@ function formatExcerptDate(date: string) {
 }
 
 function memberLine(member: HomeMemberRefDto) {
-  return [member.party_name, member.district_name].filter(Boolean).join(" | ");
-}
-
-function MemberAvatar({ member, size = "md" }: { member: HomeMemberRefDto; size?: "sm" | "md" }) {
-  const className = size === "sm" ? "avatar avatar-sm" : "avatar";
-
-  if (member.profile_image_url) {
-    return <img className={className} src={member.profile_image_url} alt={`${member.name} 프로필`} />;
-  }
-
-  return (
-    <div className={`${className} avatar-fallback`} aria-hidden="true">
-      {member.name.slice(0, 1)}
-    </div>
-  );
+  return formatMemberLine(member);
 }
 
 function HeroCard({ hero }: { hero: HomeHeroDto }) {
@@ -96,7 +88,31 @@ function EmptyHeroCard() {
   );
 }
 
-export function HomePage({ data }: HomePageProps) {
+function HeroLoadingCard() {
+  return (
+    <section className="hero-card empty-card" aria-label="최근 포착된 상반 발언 후보">
+      <div>
+        <p className="eyebrow">자동 분석 불러오는 중</p>
+        <h2>최근 상반 발언 후보를 확인하고 있습니다.</h2>
+        <p>첫 화면에 보여줄 사례만 먼저 불러옵니다.</p>
+      </div>
+    </section>
+  );
+}
+
+function SectionStatus({ message }: { message: string }) {
+  return (
+    <div className="home-status" role="status">
+      <p>{message}</p>
+    </div>
+  );
+}
+
+export function HomePage({ data, sectionStatus = {} }: HomePageProps) {
+  const heroStatus = sectionStatus.hero ?? "ready";
+  const recentCasesStatus = sectionStatus.recentCases ?? "ready";
+  const featuredMembersStatus = sectionStatus.featuredMembers ?? "ready";
+
   return (
     <div className="app-shell">
       <nav className="top-nav">
@@ -125,7 +141,7 @@ export function HomePage({ data }: HomePageProps) {
           </form>
         </header>
 
-        {data.hero ? <HeroCard hero={data.hero} /> : <EmptyHeroCard />}
+        {heroStatus === "loading" ? <HeroLoadingCard /> : data.hero ? <HeroCard hero={data.hero} /> : <EmptyHeroCard />}
 
         {data.recent_cases.length > 0 ? (
           <section className="content-section">
@@ -139,7 +155,7 @@ export function HomePage({ data }: HomePageProps) {
               {data.recent_cases.map((item) => (
                 <a className="case-card" href={`/members/${item.member.slug}`} key={item.id}>
                   <div className="case-member">
-                    <MemberAvatar member={item.member} />
+                    <MemberAvatar member={item.member} className="avatar" />
                     <div>
                       <h4>{item.member.name}</h4>
                       <p>{item.topic_label}</p>
@@ -150,16 +166,18 @@ export function HomePage({ data }: HomePageProps) {
               ))}
             </div>
           </section>
+        ) : recentCasesStatus === "loading" ? (
+          <SectionStatus message="추가 분석 사례를 불러오는 중입니다." />
         ) : null}
 
         {data.featured_members.length > 0 ? (
           <section className="content-section">
-            <h3 className="section-title">지금 주목받는 인물</h3>
+            <h3 className="section-title">최근 발언한 인물</h3>
             <div className="featured-list">
               {data.featured_members.map((item) => (
                 <a className="featured-row" href={`/members/${item.member.slug}`} key={item.member.id}>
                   <span className="rank">{String(item.rank).padStart(2, "0")}</span>
-                  <MemberAvatar member={item.member} size="sm" />
+                  <MemberAvatar member={item.member} className="avatar avatar-sm" />
                   <div>
                     <h4>{item.member.name}</h4>
                     <p>{item.summary}</p>
@@ -171,6 +189,8 @@ export function HomePage({ data }: HomePageProps) {
               ))}
             </div>
           </section>
+        ) : featuredMembersStatus === "loading" ? (
+          <SectionStatus message="최근 발언한 인물을 불러오는 중입니다." />
         ) : null}
 
         <aside className="notice">
