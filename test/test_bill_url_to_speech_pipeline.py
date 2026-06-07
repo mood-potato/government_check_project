@@ -5,6 +5,8 @@ from pipelines.pdf_to_speech_pipeline import (
     BillURLToSpeechExtractor,
     PDFToSpeechExtractor,
     PDFToSpeechPipeline,
+    _bill_pdf_source_id,
+    update_bill_url_get_pdf_status_by_download_url,
     update_bill_url_get_pdf_status,
 )
 
@@ -86,8 +88,9 @@ def test_bill_url_extractor_reads_local_pdf_without_http(monkeypatch, tmp_path):
     )
 
     assert opened_paths == [pdf_path]
-    assert result["pdf_url_id"] == "bill_url:BILLURL1"
+    assert result["pdf_url_id"] == _bill_pdf_source_id(str(pdf_path))
     assert result["bill_url_id"] == "BILLURL1"
+    assert result["download_url"] == str(pdf_path)
     assert result["title"] == "방송법 일부개정법률안"
     assert result["date"] == "2026-04-09"
     assert result["class_name"] == "상임위원회 회의록"
@@ -104,6 +107,22 @@ def test_update_bill_url_get_pdf_status_updates_bill_url_table():
 
     assert connection.cursor_obj.executed == [
         ("UPDATE bill_url SET get_pdf = %s WHERE id = %s", (True, "BILLURL1"))
+    ]
+    assert connection.committed is True
+
+
+def test_update_bill_url_get_pdf_status_by_download_url_updates_same_pdf_rows():
+    connection = RecordingConnection()
+
+    update_bill_url_get_pdf_status_by_download_url(
+        connection, "https://example.com/minutes.pdf", True
+    )
+
+    assert connection.cursor_obj.executed == [
+        (
+            "UPDATE bill_url SET get_pdf = %s WHERE download_url = %s",
+            (True, "https://example.com/minutes.pdf"),
+        )
     ]
     assert connection.committed is True
 
@@ -125,7 +144,8 @@ def test_bill_url_extractor_fetches_latest_pdf_urls_first():
     extractor.fetch_bill_urls()
 
     query = connection.cursor_obj.executed[0][0]
-    assert "ORDER BY bu.meeting_date DESC, bu.created_at DESC" in query
+    assert "SELECT DISTINCT ON (bu.download_url)" in query
+    assert "ORDER BY meeting_date DESC, created_at DESC" in query
 
 
 def test_pdf_to_speech_pipeline_processes_one_pdf_at_a_time(monkeypatch):
@@ -248,8 +268,9 @@ def test_bill_url_to_speech_pipeline_processes_one_pdf_at_a_time(monkeypatch):
         def extract_one(self, row):
             events.append(f"extract:{row['bill_url_id']}")
             return {
-                "pdf_url_id": f"bill_url:{row['bill_url_id']}",
+                "pdf_url_id": _bill_pdf_source_id(row["download_url"]),
                 "bill_url_id": row["bill_url_id"],
+                "download_url": row["download_url"],
                 "title": row["agenda_name"],
                 "date": row["meeting_date"],
                 "class_name": row["meeting_type"],
@@ -287,8 +308,8 @@ def test_bill_url_to_speech_pipeline_processes_one_pdf_at_a_time(monkeypatch):
 
     updates = []
     monkeypatch.setattr(
-        "pipelines.pdf_to_speech_pipeline.update_bill_url_get_pdf_status",
-        lambda connection, bill_url_id, status: updates.append((bill_url_id, status)),
+        "pipelines.pdf_to_speech_pipeline.update_bill_url_get_pdf_status_by_download_url",
+        lambda connection, download_url, status: updates.append((download_url, status)),
     )
 
     pipeline = object.__new__(BillURLToSpeechPipeline)
@@ -303,10 +324,13 @@ def test_bill_url_to_speech_pipeline_processes_one_pdf_at_a_time(monkeypatch):
         "fetch",
         "create_table",
         "extract:BILLURL1",
-        "transform:bill_url:BILLURL1",
-        "load:bill_url:BILLURL1",
+        f"transform:{_bill_pdf_source_id('https://example.com/1.pdf')}",
+        f"load:{_bill_pdf_source_id('https://example.com/1.pdf')}",
         "extract:BILLURL2",
-        "transform:bill_url:BILLURL2",
-        "load:bill_url:BILLURL2",
+        f"transform:{_bill_pdf_source_id('https://example.com/2.pdf')}",
+        f"load:{_bill_pdf_source_id('https://example.com/2.pdf')}",
     ]
-    assert updates == [("BILLURL1", True), ("BILLURL2", True)]
+    assert updates == [
+        ("https://example.com/1.pdf", True),
+        ("https://example.com/2.pdf", True),
+    ]

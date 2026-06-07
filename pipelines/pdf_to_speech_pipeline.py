@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
@@ -85,6 +86,28 @@ def update_bill_url_get_pdf_status(connection, bill_url_id: str, status: bool) -
     with connection.cursor() as cur:
         cur.execute(query, (status, bill_url_id))
         connection.commit()
+
+
+def update_bill_url_get_pdf_status_by_download_url(
+    connection, download_url: str, status: bool
+) -> None:
+    """같은 회의록 PDF URL을 가진 bill_url 처리 상태를 함께 갱신합니다.
+
+    Args:
+        connection: PostgreSQL 연결 객체입니다.
+        download_url: `bill_url.download_url` 값입니다.
+        status: PDF 처리 성공 여부입니다.
+    """
+    query = "UPDATE bill_url SET get_pdf = %s WHERE download_url = %s"
+    with connection.cursor() as cur:
+        cur.execute(query, (status, download_url))
+        connection.commit()
+
+
+def _bill_pdf_source_id(download_url: str) -> str:
+    """bill_url 회의록 PDF의 안정적인 발언 소스 ID를 생성합니다."""
+    digest = hashlib.sha256(download_url.encode("utf-8")).hexdigest()[:16]
+    return f"bill_pdf:{digest}"
 
 
 def _column_names(description) -> List[str]:
@@ -257,21 +280,35 @@ class BillURLToSpeechExtractor(BaseExtractor):
             raise ValueError("DB connection is not provided.")
 
         query = """
+            WITH distinct_bill_pdf AS (
+                SELECT DISTINCT ON (bu.download_url)
+                    bu.id AS bill_url_id,
+                    bu.download_url,
+                    bu.agenda_name,
+                    bu.meeting_type,
+                    bu.meeting_id,
+                    bu.dae_number,
+                    bu.meeting_date,
+                    bu.created_at,
+                    COALESCE(bi.confer_number, 0) AS confer_number
+                FROM bill_url bu
+                LEFT JOIN bill_info bi
+                  ON bi.bill_id = bu.agenda_id
+                 AND bi.meeting_id = bu.meeting_id
+                WHERE bu.get_pdf = false
+                ORDER BY bu.download_url, bu.meeting_date DESC, bu.created_at DESC
+            )
             SELECT
-                bu.id AS bill_url_id,
-                bu.download_url,
-                bu.agenda_name,
-                bu.meeting_type,
-                bu.meeting_id,
-                bu.dae_number,
-                bu.meeting_date,
-                COALESCE(bi.confer_number, 0) AS confer_number
-            FROM bill_url bu
-            LEFT JOIN bill_info bi
-              ON bi.bill_id = bu.agenda_id
-             AND bi.meeting_id = bu.meeting_id
-            WHERE bu.get_pdf = false
-            ORDER BY bu.meeting_date DESC, bu.created_at DESC
+                bill_url_id,
+                download_url,
+                agenda_name,
+                meeting_type,
+                meeting_id,
+                dae_number,
+                meeting_date,
+                confer_number
+            FROM distinct_bill_pdf
+            ORDER BY meeting_date DESC, created_at DESC
         """
         with self.connection.cursor() as cur:
             cur.execute(query)
@@ -296,8 +333,9 @@ class BillURLToSpeechExtractor(BaseExtractor):
             text = _extract_text_from_pdf_source(download_url)
             self.log_info(f"✅ bill_url PDF 처리 완료: {title}")
             return {
-                "pdf_url_id": f"bill_url:{bill_url_id}",
+                "pdf_url_id": _bill_pdf_source_id(download_url),
                 "bill_url_id": bill_url_id,
+                "download_url": download_url,
                 "title": title,
                 "date": row.get("meeting_date"),
                 "text": text,
@@ -309,7 +347,9 @@ class BillURLToSpeechExtractor(BaseExtractor):
         except Exception as e:
             self.log_info(f"❌ {title} bill_url PDF 처리 실패: {e}")
             if self.connection is not None:
-                update_bill_url_get_pdf_status(self.connection, bill_url_id, False)
+                update_bill_url_get_pdf_status_by_download_url(
+                    self.connection, download_url, False
+                )
             raise
 
     def extract_all(self, max_workers: int = 10) -> List[Dict[str, str]]:
@@ -845,11 +885,11 @@ class BillURLToSpeechPipeline(BasePipeline):
             try:
                 self.loader.load(speech_data=transformed_result)
                 logger.info(f"✅ bill_url DB 저장 완료: {len(transformed_result)}건")
-                update_bill_url_get_pdf_status(
-                    self.connection, item["bill_url_id"], True
+                update_bill_url_get_pdf_status_by_download_url(
+                    self.connection, item["download_url"], True
                 )
             except Exception as e:
-                update_bill_url_get_pdf_status(
-                    self.connection, item["bill_url_id"], False
+                update_bill_url_get_pdf_status_by_download_url(
+                    self.connection, item["download_url"], False
                 )
                 logger.error(f"❌ bill_url DB 저장 중 오류 발생: {e}")
