@@ -29,7 +29,8 @@ def test_pipeline_image_extends_uv_download_timeout():
     """큰 ML wheel 다운로드 중 timeout이 쉽게 나지 않도록 uv timeout을 늘린다."""
     dockerfile = Path("docker/pipeline.Dockerfile").read_text()
 
-    assert "UV_HTTP_TIMEOUT=600" in dockerfile
+    assert "UV_HTTP_TIMEOUT=1800" in dockerfile
+    assert "UV_HTTP_RETRIES=10" in dockerfile
 
 
 def test_make_pipeline_starts_storage_services_first():
