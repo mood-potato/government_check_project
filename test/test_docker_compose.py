@@ -11,6 +11,13 @@ def test_frontend_uses_backend_service_url_in_compose():
     assert "BACKEND_URL: http://backend:8000" in compose
 
 
+def test_postgres_service_uses_postgres_17():
+    """로컬 Docker Postgres는 17 버전을 사용한다."""
+    compose = Path("docker-compose.yaml").read_text()
+
+    assert "image: postgres:17" in compose
+
+
 def test_pipeline_container_uses_run_pipeline_entrypoint():
     """파이프라인 컨테이너는 유지보수 가능한 Python 모듈 엔트리포인트를 사용한다."""
     dockerfile = Path("docker/pipeline.Dockerfile").read_text()
