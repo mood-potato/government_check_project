@@ -20,6 +20,45 @@ make down
 make pipeline
 ```
 
+새 로컬 DB를 만들고 포함된 데이터로 기본 파이프라인을 처음부터 돌릴 때는 다음 명령을
+사용합니다.
+
+```bash
+cp .env.example .env
+make pipeline-bootstrap
+```
+
+`pipeline-bootstrap`은 Postgres와 Elasticsearch를 먼저 띄운 뒤 파이프라인 컨테이너를
+빌드하고 실행합니다. 기본 stage는 다음 순서입니다.
+
+```text
+speaker-seed,bill-url-workbook,bill-speech,vectorize,contradiction,home
+```
+
+실행 stage를 바꾸려면 `.env`의 `PIPELINE_STAGES`를 수정하거나 명령 앞에 환경변수를
+붙입니다.
+
+```bash
+PIPELINE_STAGES=speaker-seed,bill-info,bill-url,bill-speech,vectorize,contradiction,home make pipeline
+```
+
+SSH 서버나 로컬 PC에서 Make 없이 직접 실행하려면 스크립트를 사용합니다.
+
+```bash
+scripts/run_pipeline.sh --build
+scripts/run_pipeline.sh --stages bill-speech
+```
+
+Postgres와 Elasticsearch 볼륨까지 지우고 완전히 새로 검증할 때만 `--reset`을 붙입니다.
+
+```bash
+scripts/run_pipeline.sh --reset --build
+```
+
+이 스크립트는 기본적으로 `SUPABASE_DATABASE_URL`을 비워서 Docker Compose의 로컬
+Postgres에 적재합니다. 원격 Supabase에 적재할 때만 명시적으로 `--use-supabase`를
+붙입니다.
+
 ## Supabase 데이터 적재
 
 Supabase는 PostgreSQL 연결 문자열로 적재합니다. Supabase 문서 기준으로

@@ -5,7 +5,7 @@ FRONTEND_PORT ?= 3000
 include .env
 export $(shell sed 's/=.*//' .env)
 
-.PHONY: up down restart logs ps build deploy backend-logs frontend-logs pipeline backend-local frontend-local dev-local
+.PHONY: up down restart logs ps build deploy backend-logs frontend-logs pipeline pipeline-services pipeline-bootstrap backend-local frontend-local dev-local
 
 up:
 	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) up -d
@@ -36,8 +36,14 @@ backend-logs:
 frontend-logs:
 	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) logs -f frontend
 
+pipeline-services:
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) up -d postgres elasticsearch
+
 pipeline:
-	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) --profile pipeline run --rm pipeline
+	PROJECT_NAME=$(PROJECT_NAME) DOCKER_COMPOSE="$(DOCKER_COMPOSE)" scripts/run_pipeline.sh
+
+pipeline-bootstrap:
+	PROJECT_NAME=$(PROJECT_NAME) DOCKER_COMPOSE="$(DOCKER_COMPOSE)" scripts/run_pipeline.sh --build
 
 backend-local:
 	uv run uvicorn backend.api.main:app --host 127.0.0.1 --port $(BACKEND_PORT) --reload

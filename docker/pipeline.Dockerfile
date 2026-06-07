@@ -13,4 +13,4 @@ RUN uv sync --no-dev --frozen --no-install-project
 COPY pipelines/ pipelines/
 COPY data/ data/
 
-CMD ["uv", "run", "python", "-c", "from pipelines.schedule_to_pdf_pipeline import ScheduleToPDFPipeline; from pipelines.pdf_to_speech_pipeline import PDFToSpeechPipeline; from pipelines.vectorize_pipeline import VectorizePipeline; ScheduleToPDFPipeline().run(); PDFToSpeechPipeline().run(); VectorizePipeline().run()"]
+CMD ["uv", "run", "python", "-m", "pipelines.run_pipeline"]
