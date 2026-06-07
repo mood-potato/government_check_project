@@ -7,3 +7,10 @@ def test_backend_image_includes_pipeline_modules():
 
     assert "COPY backend/ backend/" in dockerfile
     assert "COPY pipelines/ pipelines/" in dockerfile
+
+
+def test_backend_image_extends_uv_download_timeout():
+    """큰 ML wheel 다운로드 중 timeout이 쉽게 나지 않도록 uv timeout을 늘린다."""
+    dockerfile = Path("docker/backend.Dockerfile").read_text()
+
+    assert "UV_HTTP_TIMEOUT=600" in dockerfile
