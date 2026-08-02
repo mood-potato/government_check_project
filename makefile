@@ -5,7 +5,7 @@ FRONTEND_PORT ?= 3000
 include .env
 export $(shell sed 's/=.*//' .env)
 
-.PHONY: up down restart logs ps build deploy backend-logs frontend-logs pipeline pipeline-services pipeline-bootstrap backend-local frontend-local dev-local
+.PHONY: up down restart logs ps build deploy backend-logs frontend-logs pipeline pipeline-services pipeline-bootstrap airflow airflow-build backend-local frontend-local dev-local
 
 up:
 	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) up -d
@@ -44,6 +44,12 @@ pipeline:
 
 pipeline-bootstrap:
 	PROJECT_NAME=$(PROJECT_NAME) DOCKER_COMPOSE="$(DOCKER_COMPOSE)" scripts/run_pipeline.sh --build
+
+airflow-build:
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) build airflow
+
+airflow:
+	$(DOCKER_COMPOSE) -p $(PROJECT_NAME) up -d airflow
 
 backend-local:
 	uv run uvicorn backend.api.main:app --host 127.0.0.1 --port $(BACKEND_PORT) --reload
