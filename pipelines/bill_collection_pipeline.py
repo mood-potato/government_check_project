@@ -12,6 +12,7 @@ from tqdm import tqdm
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
 from pipelines.utils.common import OPEN_GOVERMENT_API_KEY
 from pipelines.utils.db import get_postgres_connection
+from pipelines.utils.schema import load_table_ddl
 from pipelines.utils.openapi import (
     CONGRESS_BILL_CONF_LIST_URL,
     CONGRESS_BILL_LIST_URL,
@@ -248,29 +249,7 @@ class BillInfoLoader(BaseLoader):
 
     def create_table(self):
         """bill_info 테이블과 인덱스를 생성합니다."""
-        queries = [
-            """
-            CREATE TABLE IF NOT EXISTS bill_info (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                meeting_id TEXT NOT NULL,
-                dae_number INT NOT NULL,
-                session_number INT NOT NULL,
-                confer_number INT NOT NULL,
-                bill_id TEXT NOT NULL,
-                bill_name TEXT NOT NULL,
-                bill_order INT,
-                detail_link TEXT,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
-            """,
-            """
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_bill_info_meeting_bill
-            ON bill_info (meeting_id, bill_id);
-            """,
-            """CREATE INDEX IF NOT EXISTS idx_bill_info_bill_id ON bill_info (bill_id);""",
-        ]
-        for query in queries:
-            self._execute_query(query)
+        self._execute_query(load_table_ddl("bill_info"))
         self.log_info("회의별 의안 목록 bill_info 테이블 준비 완료")
 
     def load(self, bill_info_data: Dict):
@@ -666,30 +645,7 @@ class BillUrlLoader(BaseLoader):
 
     def create_table(self):
         """bill_url 테이블과 인덱스를 생성합니다."""
-        queries = [
-            """
-            CREATE TABLE IF NOT EXISTS bill_url (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                agenda_id TEXT NOT NULL,
-                agenda_name TEXT NOT NULL,
-                meeting_type TEXT NOT NULL,
-                meeting_id TEXT NOT NULL,
-                dae_number INT NOT NULL,
-                meeting_date DATE NOT NULL,
-                download_url TEXT NOT NULL,
-                get_pdf BOOLEAN NOT NULL DEFAULT FALSE,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
-            """,
-            """
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_bill_url_agenda_meeting_download
-            ON bill_url (agenda_id, meeting_id, download_url);
-            """,
-            """CREATE INDEX IF NOT EXISTS idx_bill_url_get_pdf ON bill_url (get_pdf);""",
-            """CREATE INDEX IF NOT EXISTS idx_bill_url_agenda_id ON bill_url (agenda_id);""",
-        ]
-        for query in queries:
-            self._execute_query(query)
+        self._execute_query(load_table_ddl("bill_url"))
         self.log_info("bill_url 테이블 준비 완료")
 
     def load(self, bill_url_data: Dict):

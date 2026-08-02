@@ -13,6 +13,7 @@ from loguru import logger
 
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
 from pipelines.utils.db import get_postgres_connection, update_get_pdf_status
+from pipelines.utils.schema import load_table_ddl
 
 
 NON_SPEECH_KEYWORDS = [
@@ -611,71 +612,7 @@ class PDFToSpeechLoader(BaseLoader):
     def _create_tables(self) -> None:
         """필요한 데이터베이스 테이블과 인덱스를 생성합니다."""
         try:
-            queries = [
-                """
-                CREATE TABLE IF NOT EXISTS speeches (
-                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    pdf_url_id TEXT NOT NULL,
-                    speaker_id UUID REFERENCES speakers(id) ON DELETE SET NULL,
-                    speaker_name TEXT NOT NULL,
-                    speaker_title TEXT,
-                    speech_number INT NOT NULL,
-                    date DATE NOT NULL,
-                    title TEXT,
-                    class_name TEXT NOT NULL,
-                    confer_number INT NOT NULL,
-                    dae_number INT NOT NULL,
-                    speech TEXT NOT NULL,
-                    summary TEXT,
-                    vectorized BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT unique_speech UNIQUE (pdf_url_id, speech_number)
-                );
-                """,
-            ]
-            for query in queries:
-                self._execute_query(query)
-
-            migration_queries = [
-                "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS title TEXT;",
-                "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS summary TEXT;",
-                "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS vectorized BOOLEAN DEFAULT FALSE;",
-                "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS speaker_name TEXT;",
-                "ALTER TABLE speeches ADD COLUMN IF NOT EXISTS speaker_title TEXT;",
-                """
-                UPDATE speeches s
-                SET speaker_name = sp.name
-                FROM speakers sp
-                WHERE s.speaker_id = sp.id
-                  AND s.speaker_name IS NULL;
-                """,
-                "ALTER TABLE speeches ALTER COLUMN speaker_id DROP NOT NULL;",
-                """
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (
-                        SELECT 1
-                        FROM pg_constraint
-                        WHERE conname = 'unique_speech'
-                    ) THEN
-                        ALTER TABLE speeches
-                        ADD CONSTRAINT unique_speech UNIQUE (pdf_url_id, speech_number);
-                    END IF;
-                END $$;
-                """,
-            ]
-            for query in migration_queries:
-                self._execute_query(query)
-
-            index_queries = [
-                """CREATE INDEX IF NOT EXISTS idx_speeches_pdf_url_id ON speeches(pdf_url_id);""",
-                """CREATE INDEX IF NOT EXISTS idx_speeches_speaker_id ON speeches(speaker_id);""",
-                """CREATE INDEX IF NOT EXISTS idx_speeches_speaker_name ON speeches(speaker_name);""",
-                """CREATE INDEX IF NOT EXISTS idx_speeches_vectorized ON speeches(vectorized);""",
-            ]
-            for query in index_queries:
-                self._execute_query(query)
-
+            self._execute_query(load_table_ddl("speeches"))
             logger.info("✅ 데이터베이스 테이블 생성 완료")
         except Exception as e:
             logger.error(f"❌ 데이터베이스 테이블 생성 실패: {e}")

@@ -8,6 +8,7 @@ from tqdm import tqdm
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
 from pipelines.utils.common import OPEN_GOVERMENT_API_KEY
 from pipelines.utils.db import get_postgres_connection
+from pipelines.utils.schema import load_table_ddl
 from pipelines.utils.openapi import (
     get_date_range_filter,
     get_existing_pdf_urls,
@@ -199,23 +200,7 @@ class PDFUrlLoader(BaseLoader):
 
     def create_table(self):
         """PDF URL 저장 테이블을 생성합니다."""
-        query = """
-            CREATE TABLE IF NOT EXISTS pdf_url (
-                pdf_url_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                confer_number INT,
-                dae_number INT,
-                date DATE NOT NULL,
-                title TEXT NOT NULL,
-                class_name TEXT,
-                sub_name TEXT,
-                vod_link TEXT,
-                conf_link TEXT,
-                pdf_url TEXT,
-                get_pdf BOOLEAN DEFAULT FALSE,
-                CONSTRAINT unique_pdf UNIQUE (date, title, pdf_url)
-            );
-        """
-        self._execute_query(query)
+        self._execute_query(load_table_ddl("pdf_url"))
         logger.info("✅ pdf_url 테이블 생성 완료 (또는 이미 존재함)")
 
     def load(self, pdf_url_data):

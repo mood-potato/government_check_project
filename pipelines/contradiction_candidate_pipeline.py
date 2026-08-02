@@ -6,6 +6,7 @@ from loguru import logger
 
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
 from pipelines.utils.db import get_postgres_connection
+from pipelines.utils.schema import load_table_ddl
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -347,24 +348,8 @@ class ContradictionCandidateLoader(BaseLoader):
 
     def create_table(self) -> None:
         """contradiction_candidates 테이블과 인덱스를 보장합니다."""
-        query = """
-        CREATE TABLE IF NOT EXISTS contradiction_candidates (
-            id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-            speaker_id       UUID        NOT NULL REFERENCES speakers (id),
-            past_speech_id   UUID        NOT NULL REFERENCES speeches (id),
-            recent_speech_id UUID        NOT NULL REFERENCES speeches (id),
-            topic_label      TEXT        NOT NULL,
-            summary          TEXT        NOT NULL,
-            score            FLOAT       NOT NULL DEFAULT 0.0,
-            matched_cues     TEXT[]      NOT NULL DEFAULT '{}',
-            created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-            CONSTRAINT uq_contradiction_pair UNIQUE (past_speech_id, recent_speech_id)
-        );
-        CREATE INDEX IF NOT EXISTS idx_contradiction_speaker_created
-        ON contradiction_candidates (speaker_id, created_at DESC);
-        """
         with self.connection.cursor() as cursor:
-            cursor.execute(query)
+            cursor.execute(load_table_ddl("contradiction_candidates"))
         self.connection.commit()
 
     def load(self, candidates: list[dict[str, Any]]) -> int:

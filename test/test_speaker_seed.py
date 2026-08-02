@@ -265,18 +265,18 @@ def test_database_loader_ensures_profile_image_columns_before_upsert():
 
     loader.load([speaker])
 
-    queries = [query for query, _params in connection.cursor_instance.queries]
-    assert "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_url TEXT;" in queries
+    schema_query, _ = connection.cursor_instance.queries[0]
+    assert "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_url TEXT;" in schema_query
     assert (
         "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_source TEXT;"
-        in queries
+        in schema_query
     )
     assert (
         "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_license TEXT;"
-        in queries
+        in schema_query
     )
     assert (
         "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_updated_at TIMESTAMPTZ;"
-        in queries
+        in schema_query
     )
-    assert "INSERT INTO speakers" in queries[-1]
+    assert "INSERT INTO speakers" in connection.cursor_instance.queries[-1][0]

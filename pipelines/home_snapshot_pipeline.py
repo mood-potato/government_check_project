@@ -4,6 +4,7 @@ from typing import Any
 
 from pipelines.base import BaseExtractor, BaseLoader, BasePipeline, BaseTransformer
 from pipelines.utils.db import get_postgres_connection
+from pipelines.utils.schema import load_table_ddl
 
 DEFAULT_TTL_MINUTES = 10
 DEFAULT_ASSEMBLY_NUMBER = 22
@@ -133,17 +134,8 @@ class HomeSnapshotLoader(BaseLoader):
 
     def create_table(self) -> None:
         """홈 섹션 스냅샷 테이블을 보장합니다."""
-        query = """
-        CREATE TABLE IF NOT EXISTS home_section_snapshot (
-            section_key      text PRIMARY KEY,
-            payload          jsonb NOT NULL,
-            calculated_at    timestamptz NOT NULL DEFAULT now(),
-            expires_at       timestamptz,
-            version          integer NOT NULL DEFAULT 1
-        );
-        """
         with self.connection.cursor() as cursor:
-            cursor.execute(query)
+            cursor.execute(load_table_ddl("home_section_snapshot"))
         self.connection.commit()
 
     def load(

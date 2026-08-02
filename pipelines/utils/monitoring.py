@@ -5,6 +5,7 @@ from loguru import logger
 from psycopg2.extensions import connection as pg_connection
 
 from pipelines.utils.db import execute_query
+from pipelines.utils.schema import load_table_ddl
 
 
 def ensure_monitoring_tables(connection: pg_connection) -> None:
@@ -13,49 +14,7 @@ def ensure_monitoring_tables(connection: pg_connection) -> None:
     Args:
         connection: PostgreSQL 연결 객체입니다.
     """
-    queries = [
-        """
-        CREATE TABLE IF NOT EXISTS pipeline_runs (
-            run_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            pipeline_name TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'running',
-            started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            finished_at TIMESTAMPTZ,
-            inserted_count INT NOT NULL DEFAULT 0,
-            updated_count INT NOT NULL DEFAULT 0,
-            skipped_count INT NOT NULL DEFAULT 0,
-            failed_count INT NOT NULL DEFAULT 0,
-            error_message TEXT,
-            meta JSONB NOT NULL DEFAULT '{}'::jsonb
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS pipeline_row_events (
-            id BIGSERIAL PRIMARY KEY,
-            run_id UUID NOT NULL REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
-            target_table TEXT NOT NULL,
-            record_key TEXT NOT NULL,
-            action TEXT NOT NULL,
-            source_date DATE,
-            occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            meta JSONB NOT NULL DEFAULT '{}'::jsonb
-        );
-        """,
-        """
-        CREATE INDEX IF NOT EXISTS idx_pipeline_runs_started_at
-        ON pipeline_runs (started_at DESC);
-        """,
-        """
-        CREATE INDEX IF NOT EXISTS idx_pipeline_row_events_run_id
-        ON pipeline_row_events (run_id);
-        """,
-        """
-        CREATE INDEX IF NOT EXISTS idx_pipeline_row_events_table_date
-        ON pipeline_row_events (target_table, source_date);
-        """,
-    ]
-    for query in queries:
-        execute_query(connection, query)
+    execute_query(connection, load_table_ddl("pipeline_monitoring"))
 
 
 def start_pipeline_run(

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from pipelines.utils.db import get_postgres_connection
+from pipelines.utils.schema import load_table_ddl
 
 
 PROFILE_IMAGE_SOURCE = "국회의원정보통합API.csv 국회의원사진"
@@ -306,23 +307,13 @@ class SpeakerDatabaseLoader:
         self.connection = connection
 
     def create_table(self) -> None:
-        """`speakers` 테이블에 사진 메타 컬럼을 보장합니다."""
+        """`speakers` 테이블과 사진 메타 컬럼을 보장합니다."""
         with self.connection.cursor() as cursor:
-            self._ensure_profile_image_columns(cursor)
+            self._ensure_table(cursor)
 
-    def _ensure_profile_image_columns(self, cursor: Any) -> None:
-        """사진 메타 컬럼이 없는 DB에서도 seed 적재가 가능하게 보장합니다."""
-        queries = [
-            "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_url TEXT;",
-            "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_source TEXT;",
-            "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS profile_image_license TEXT;",
-            (
-                "ALTER TABLE speakers ADD COLUMN IF NOT EXISTS "
-                "profile_image_updated_at TIMESTAMPTZ;"
-            ),
-        ]
-        for query in queries:
-            cursor.execute(query)
+    def _ensure_table(self, cursor: Any) -> None:
+        """`schema.sql`의 `speakers` DDL을 실행해 테이블/컬럼/인덱스를 보장합니다."""
+        cursor.execute(load_table_ddl("speakers"))
 
     def load(self, speakers: Iterable[SpeakerSeedRow]) -> int:
         """의원 row 목록을 `speakers` 테이블에 upsert합니다.
@@ -339,7 +330,7 @@ class SpeakerDatabaseLoader:
         rows = list(speakers)
         try:
             with self.connection.cursor() as cursor:
-                self._ensure_profile_image_columns(cursor)
+                self._ensure_table(cursor)
                 for speaker in rows:
                     cursor.execute(UPSERT_SPEAKER_SQL, _speaker_params(speaker))
             self.connection.commit()
