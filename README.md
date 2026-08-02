@@ -1,6 +1,11 @@
 # goverment_check_project
 국회의원 회의록 분석 확인하는 웹사이트
 
+새로 들어왔다면 [`ONBOARDING.md`](./ONBOARDING.md)부터 순서대로 확인하세요.
+
+## AI 개발 프로세스
+
+이 레포는 `CLAUDE.md`(Claude Code 작업 지침), `AGENTS.md`(제품 방향·코드 스타일), `.claude/agents`+`.claude/skills`(플로우 생성 → 검토 → 피쳐 기획 → 검토 → 설계 → 개발 → 검증 7단계 AI 개발 프로세스)를 함께 관리합니다. 새 작업을 시작하기 전 `AGENTS.md`를 먼저 읽고, "개발 프로세스 시작"이라고 말해 `dev-process-orchestrator` 스킬로 단계를 밟으세요. 용어는 [`CONTEXT.md`](./CONTEXT.md)를 따릅니다.
 
 ## Docker
 
@@ -19,6 +24,19 @@ make down
 ```bash
 make pipeline
 ```
+
+## 파이프라인 실패 알림
+
+Airflow는 매일 한국 시간 03:00에 실행됩니다. 각 단계를 한 번 재시도하고 최종 실패했을 때만 이메일을 보냅니다.
+`.env`에 Gmail 주소, Google 앱 비밀번호, 수신 주소를 설정합니다.
+
+```dotenv
+AIRFLOW_SMTP_USER=sender@gmail.com
+AIRFLOW_SMTP_PASSWORD=google_app_password
+PIPELINE_ALERT_EMAIL=recipient@gmail.com
+```
+
+일반 Gmail 비밀번호를 사용하거나 앱 비밀번호를 Git에 커밋하지 않습니다.
 
 새 로컬 DB를 만들고 포함된 데이터로 기본 파이프라인을 처음부터 돌릴 때는 다음 명령을
 사용합니다.

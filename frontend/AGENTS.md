@@ -24,6 +24,8 @@ Node.js, npm, pnpm, Vite, Express 대신 Bun 기반 명령과 `Bun.serve()`를 �
 - Member detail: `src/features/member-detail/MemberDetailPage.tsx`
   - 인물 프로필, 주요 지표, 갈등 기록, 상반 발언 분석, 참여 안건, 관련 인물을 순서대로 보여준다.
   - 표현은 평가형보다 사실형과 원문 확인 중심으로 유지한다.
+- Member list: `src/features/members/MemberListPage.tsx`
+  - 얼굴/이름/정당/선거구 기준 국회의원 프로필 그리드. `MemberProfileCard`를 카드 단위로 반복 렌더링한다.
 
 ## Data Shape
 

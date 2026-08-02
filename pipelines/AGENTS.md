@@ -16,7 +16,7 @@
 
 - `bill_collection_pipeline.py` 검증 시 기본 범위는 의안 목록 적재와 의안 PDF URL 적재까지다.
 - PDF 다운로드, 회의록 텍스트 추출, 벡터화, 분석 파이프라인은 명시 요청 전 실행하지 않는다.
-- 제한 실행 예시는 `BillCollectionPipeline`을 직접 import해서 `bill_info_page_size`, `bill_info_max_pages`, `bill_url_page_size`, `bill_url_max_pages`, `bill_url_max_workers`를 작게 지정한다.
+- 제한 실행 예시는 `bill_collection_pipeline.py`의 `BillInfoPipeline`(`bill_info_page_size`, `bill_info_max_pages`)과 `BillUrlPipeline`(`bill_url_page_size`, `bill_url_max_pages`, `bill_url_max_workers`)을 직접 import해서 작게 지정한다.
 
 ## Verification
 
