@@ -35,7 +35,7 @@ def test_pipeline_image_extends_uv_download_timeout():
 
 def test_make_pipeline_starts_storage_services_first():
     """make pipeline은 공용 실행 스크립트를 호출한다."""
-    makefile = Path("Makefile").read_text()
+    makefile = Path("makefile").read_text()
 
     assert "pipeline:" in makefile
     assert "scripts/run_pipeline.sh" in makefile
@@ -53,6 +53,21 @@ def test_pipeline_script_starts_storage_services_before_pipeline():
     assert "--reset" in script
     assert "SUPABASE_DATABASE_URL=" in script
     assert "--use-supabase" in script
+
+
+def test_airflow_emails_only_after_retries_are_exhausted():
+    """Airflow는 재시도 중이 아니라 최종 실패 시에만 이메일을 보낸다."""
+    dag = Path("airflow/dags/government_pipeline.py").read_text()
+    compose = Path("docker-compose.yaml").read_text()
+
+    assert '"email_on_failure": True' in dag
+    assert '"email_on_retry": False' in dag
+    assert 'os.environ.get("PIPELINE_ALERT_EMAIL")' in dag
+    assert "AIRFLOW__SMTP__SMTP_HOST: smtp.gmail.com" in compose
+    assert 'schedule="0 3 * * *"' in dag
+    assert 'ZoneInfo("Asia/Seoul")' in dag
+    assert "airflow_data:/opt/airflow" in compose
+    assert "/api/v2/monitor/health" in compose
 
 
 def test_run_pipeline_default_stages_use_local_workbook_source():
